@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA SUMAJ - v20.0 (CLOUD ONLINE)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        /* Mismos estilos que la v19.19 */
+        :root { --disponible:#2ecc71; --ocupado:#e74c3c; --sucia: #f1c40f; --limpieza: #3498db; --parcial:#f39c12; --pagado:#2980b9; --historial:#5a6268; --dark:#1a2a3a; --accent:#3498db; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: var(--dark) !important; border-bottom: 3px solid var(--accent); }
+        .nav-link.active { color: var(--accent) !important; border-bottom: 3px solid var(--accent) !important; }
+        .hab-card { border-radius: 15px; border: 1px solid #dee2e6; transition: 0.3s; cursor: pointer; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 12px solid transparent; position: relative; overflow: hidden; height: 100%; }
+        .hab-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .status-disponible { border-left-color: var(--disponible); } .status-ocupado { border-left-color: var(--ocupado); background: #fff5f5; } .status-sucia { border-left-color: var(--sucia); background: #fffff0; } .status-limpieza { border-left-color: var(--limpieza); background: #f0f8ff; }
+        .piso-header { background: #cbd5e0; color: #2d3748; padding: 8px 15px; border-radius: 8px; margin-top: 30px; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; }
+        .cal-wrapper { overflow-x: auto; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-calendar { font-size: 0.75rem; border-collapse: separate; border-spacing: 1px; width: 100%; min-width: 900px; }
+        .table-calendar th { text-align: center; background: #343a40; color: white; padding: 8px; position: sticky; top: 0; z-index: 20; }
+        .cal-room-col { background: #212529; color: white; position: sticky; left: 0; z-index: 30; font-weight: bold; width: 60px; text-align: center; }
+        .cal-cell { height: 40px; border: 1px solid #dee2e6; vertical-align: middle; text-align: center; min-width: 40px; padding: 0; position: relative; background-color: #fff; }
+        .cell-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: white; cursor: pointer; overflow: hidden; white-space: nowrap; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .st-mid { background: var(--ocupado); } .st-start { background: linear-gradient(to right, white 50%, var(--ocupado) 50%); justify-content: flex-end; padding-right: 2px; color: #333; } .st-end { background: linear-gradient(to right, var(--ocupado) 50%, white 50%); justify-content: flex-start; padding-left: 2px; color: #333; } .hist-mid { background: var(--historial); } .hist-start { background: linear-gradient(to right, white 50%, var(--historial) 50%); } .hist-end { background: linear-gradient(to right, var(--historial) 50%, white 50%); } .cal-weekend { background-color: #f8f9fa; } .cal-today-col { border-bottom: 3px solid #ffc107 !important; background-color: #fffbe6; }
+        .clean-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: white; border-radius: 8px; border-left: 5px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); } .clean-sucia { border-left-color: var(--sucia); } .clean-limpieza { border-left-color: var(--limpieza); } .clean-ok { border-left-color: var(--disponible); opacity: 0.8; }
+        .op-card { font-size: 0.9rem; margin-bottom: 8px; border-left: 5px solid #ccc; background: white; padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; } .op-in { border-left-color: #2ecc71; } .op-out { border-left-color: #e74c3c; } .stock-bajo { color: red; font-weight: bold; } .mov-ingreso { color: #198754; font-weight: bold; } .mov-egreso { color: #dc3545; font-weight: bold; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: url('nuestra-habitacion-matrimonial.jpg') no-repeat center center; background-size: cover; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: rgba(255, 255, 255, 0.95); padding: 3rem; border-radius: 8px; width: 100%; max-width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); text-align: center; backdrop-filter: blur(2px); }
+        .btn-login-custom { background-color: #6d4c41; border: none; color: white; transition: 0.3s; } .btn-login-custom:hover { background-color: #5d4037; color: white; } .pass-hidden { -webkit-text-security: disc; }
+        .ls-1 { letter-spacing: 1px; } .hover-effect:hover { transform: translateY(-2px); transition: 0.2s; }
+        .detail-header { background-color: #f8f9fa; border-bottom: 1px solid #e9ecef; border-top-left-radius: 10px; border-top-right-radius: 10px;} .detail-label { font-size: 0.7rem; text-transform: uppercase; color: #6c757d; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 2px; } .detail-value { font-size: 0.95rem; font-weight: 600; color: #2d3748; } .cons-table th { font-size: 0.75rem; text-transform: uppercase; color: #6c757d; font-weight: 600; background: #f8f9fa; } .cons-table td { font-size: 0.9rem; vertical-align: middle; } .total-box { background: linear-gradient(to right, #f8f9fa, #fff); border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; } .debt-high { color: #dc3545; font-size: 1.4rem; font-weight: 800; } .debt-ok { color: #198754; font-size: 1.4rem; font-weight: 800; }
+        
+        /* Loader Firebase */
+        #cloudLoader { position: fixed; top: 10px; right: 10px; z-index: 10000; background: rgba(0,0,0,0.7); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="cloudLoader"><i class="fas fa-sync fa-spin me-2"></i>Sincronizando...</div>
+
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2 class="fw-bold mb-4" style="color: #3e2723; font-size: 2rem; letter-spacing: 1px;">SUMAJ LODGE</h2>
+        <div class="mb-3 text-start">
+            <label class="form-label fw-bold text-secondary small">USUARIO</label>
+            <input type="text" id="loginUser" class="form-control form-control-lg bg-white border-secondary-subtle" placeholder="">
+        </div>
+        <div class="mb-4 text-start">
+            <label class="form-label fw-bold text-secondary small">CONTRASEÑA</label>
+            <input type="password" id="loginPass" class="form-control form-control-lg bg-white border-secondary-subtle" placeholder="">
+        </div>
+        <button class="btn btn-login-custom w-100 fw-bold py-3 fs-6 shadow-sm" onclick="window.funcs.login()">INGRESAR</button>
+    </div>
+</div>
+
+<div id="appInterface" style="display:none;">
+    <nav class="navbar navbar-expand shadow mb-4">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand fw-bold text-white"><i class="fas fa-hotel me-2"></i>SUMAJ LAGOON LODGE <span class="badge bg-success ms-2" style="font-size:0.6rem">ONLINE</span></span>
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-white small text-end"><div id="userDisplay" class="fw-bold text-warning"></div><div id="reloj" class="fw-light"></div></div>
+                <button class="btn btn-sm btn-outline-light" onclick="window.funcs.logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <ul class="nav nav-tabs mb-4 border-0" id="mainTabs">
+            <li class="nav-item" id="nav-mapa"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mapa">🗺️ MAPA</button></li>
+            <li class="nav-item" id="nav-limpieza"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-limpieza" onclick="window.funcs.renderLimpieza()">🧹 LIMPIEZA</button></li>
+            <li class="nav-item" id="nav-calendario"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-calendario" onclick="window.funcs.renderCal()">📅 CALENDARIO</button></li>
+            <li class="nav-item" id="nav-operaciones"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-operaciones" onclick="window.funcs.actualizarOperaciones()">📋 OPERACIONES</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-caja" onclick="window.funcs.renderCaja()">💰 CAJA</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-inventario">📦 ALMACÉN</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reporte" onclick="window.funcs.actualizarReporte()">📊 REPORTES</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-usuarios" onclick="window.funcs.renderUsuarios()">👥 USUARIOS</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-auditoria" onclick="window.funcs.renderLogs()">👁️ AUDITORÍA</button></li>
+            <li class="nav-item role-admin"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-config" onclick="window.funcs.renderConfigHabs()">⚙️ CONFIGURACIÓN</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-mapa">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="small fw-bold text-muted">VISTA: HOY</span>
+                            <div class="d-flex gap-2 small">
+                                <span class="badge bg-success">Libre</span>
+                                <span class="badge bg-danger">Ocupado</span>
+                                <span class="badge bg-warning text-dark">Sucia</span>
+                                <span class="badge bg-primary">Limpieza</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-primary fw-bold shadow-sm" onclick="window.funcs.abrirModalNuevaReserva()">➕ NUEVA RESERVA</button>
+                            <input type="date" id="filtroFecha" class="form-control w-auto shadow-sm" onchange="window.funcs.actualizarPantalla()">
+                        </div>
+                    </div>
+                    <div id="gridHabitaciones" class="row g-3"></div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="tab-limpieza"><div class="card p-4 border-0 shadow-sm"><h5 class="fw-bold mb-4"><i class="fas fa-broom"></i> Gestión de Limpieza</h5><div class="row"><div class="col-md-6 border-end"><h6 class="text-danger fw-bold border-bottom pb-2">SUCIAS / EN PROCESO</h6><div id="listSucias" class="mt-3"></div></div><div class="col-md-6"><h6 class="text-success fw-bold border-bottom pb-2">LISTAS</h6><div id="listLimpias" class="mt-3"></div></div></div></div></div>
+            <div class="tab-pane fade" id="tab-calendario"><div class="card border-0 shadow-sm p-3"><div class="d-flex justify-content-between flex-wrap gap-2 align-items-center mb-3 bg-light p-2 rounded"><div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-outline-dark" onclick="window.funcs.navMes(-1)"><i class="fas fa-chevron-left"></i></button><h6 class="m-0 fw-bold text-uppercase" id="calMesTitulo" style="min-width: 150px; text-align:center;"></h6><button class="btn btn-sm btn-outline-dark" onclick="window.funcs.navMes(1)"><i class="fas fa-chevron-right"></i></button></div><button class="btn btn-primary btn-sm fw-bold shadow-sm ms-2" onclick="window.funcs.abrirModalReservaCal()">➕ NUEVA RESERVA</button><div class="d-flex gap-2"><button class="btn btn-sm btn-danger" onclick="window.funcs.exportarCalPDF()"><i class="fas fa-file-pdf"></i></button><button class="btn btn-sm btn-dark" onclick="window.funcs.exportarCalImg()"><i class="fas fa-image"></i></button></div><input type="hidden" id="calInicio"><input type="hidden" id="calFin"></div><div id="calContainer" class="cal-wrapper"><table class="table-calendar" id="tablaCal"></table></div></div></div>
+            <div class="tab-pane fade" id="tab-operaciones"><div class="card p-4 border-0 shadow-sm"><div class="d-flex justify-content-between mb-4"><h5 class="fw-bold">Reporte Operativo</h5><div class="d-flex gap-2"><input type="date" id="fechaOp" class="form-control w-auto" onchange="window.funcs.actualizarOperaciones()"><button class="btn btn-outline-secondary btn-sm" onclick="window.funcs.imprimirOp()">Imprimir</button></div></div><div id="opArea" class="row g-4"><div class="col-md-6 border-end"><h6>LLEGADAS</h6><div id="listIn"></div></div><div class="col-md-6"><h6>SALIDAS</h6><div id="listOut"></div></div></div></div></div>
+            <div class="tab-pane fade" id="tab-caja"><div class="row g-4"><div class="col-md-4"><div class="card p-4 border-0 shadow-sm mb-3"><h6 class="fw-bold mb-3 text-primary">Caja Chica</h6><select id="cajaTipo" class="form-select mb-2"><option value="egreso">🔴 EGRESO</option><option value="ingreso">🟢 INGRESO</option></select><select id="cajaCat" class="form-select mb-2"><option>Compras</option><option>Servicios</option><option>Otros</option></select><input type="text" id="cajaDesc" class="form-control mb-2" placeholder="Descripción"><input type="number" id="cajaMonto" class="form-control mb-2" placeholder="Monto"><button class="btn btn-dark w-100" onclick="window.funcs.guardarMovimientoCaja()">REGISTRAR</button></div><div class="card bg-warning bg-opacity-10 p-3 text-center"><h6 class="fw-bold">SALDO</h6><h2 class="fw-bold text-warning" id="cajaSaldo">S/ 0.00</h2></div></div><div class="col-md-8"><div class="card p-4 border-0 shadow-sm"><table class="table table-sm" id="tablaCaja"><thead class="table-light"><tr><th>Fecha</th><th>Tipo</th><th>Desc</th><th>Monto</th><th></th></tr></thead><tbody id="bodyCaja"></tbody></table></div></div></div></div>
+            <div class="tab-pane fade" id="tab-inventario"><div class="row g-4"><div class="col-md-4"><div class="card p-4 border-0 shadow-sm"><h6>Nuevo Item</h6><select id="invTipo" class="form-select mb-2" onchange="window.funcs.toggleStockInput()"><option value="producto">Producto</option><option value="servicio">Servicio</option></select><input type="text" id="invNombre" class="form-control mb-2" placeholder="Nombre"><input type="number" id="invPrecio" class="form-control mb-2" placeholder="Precio"><div id="divStockInput"><input type="number" id="invStock" class="form-control mb-2" placeholder="Stock"></div><button class="btn btn-success w-100" onclick="window.funcs.agregarProducto()">GUARDAR</button></div></div><div class="col-md-8"><div class="card p-4 border-0 shadow-sm"><table class="table table-sm"><thead class="table-light"><tr><th>Item</th><th>Tipo</th><th>Precio</th><th>Stock</th><th>Acción</th></tr></thead><tbody id="tablaInventario"></tbody></table></div></div></div></div>
+            <div class="tab-pane fade" id="tab-reporte"><div class="row g-3 mb-4"><div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><label class="small fw-bold">Desde</label><input type="date" id="hist_desde" class="form-control" onchange="window.funcs.actualizarReporte()"></div></div><div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><label class="small fw-bold">Hasta</label><input type="date" id="hist_hasta" class="form-control" onchange="window.funcs.actualizarReporte()"></div></div><div class="col-md-6 d-flex align-items-end"><button class="btn btn-success me-2" onclick="window.funcs.exportarExcel()">Excel</button></div></div><div class="row mb-4"><div class="col-md-3"><div class="card card-dash bg-success p-3 text-white"><div>INGRESOS</div><h3 id="dashCobrado">S/ 0.00</h3></div></div><div class="col-md-3"><div class="card card-dash bg-secondary p-3 text-white"><div>GASTOS</div><h3 id="dashGastos">S/ 0.00</h3></div></div><div class="col-md-3"><div class="card card-dash bg-primary p-3 text-white"><div>UTILIDAD</div><h3 id="dashUtilidad">S/ 0.00</h3></div></div><div class="col-md-3"><div class="card card-dash bg-danger p-3 text-white"><div>PENDIENTE</div><h3 id="dashPendiente">S/ 0.00</h3></div></div></div><div id="captureArea" class="card border-0 shadow-sm p-4"><div class="table-responsive"><table class="table table-hover small" id="tablaHistorialHTML"><thead class="table-dark"><tr><th>Hab</th><th>Pax</th><th>Nombre</th><th>In/Out</th><th>Total</th><th>Pagado</th><th>Cierre</th></tr></thead><tbody id="tablaHistorial"></tbody></table></div></div></div>
+            <div class="tab-pane fade" id="tab-usuarios"><div class="row"><div class="col-md-4"><div class="card p-4 border-0 shadow-sm"><h6 class="fw-bold mb-3">Usuario</h6><input type="hidden" id="editUserIndex" value="-1"><label class="small">Usuario</label><input type="text" id="newUserName" class="form-control mb-2"><label class="small">Contraseña</label><input type="text" id="newUserPass" class="form-control mb-2"><label class="small fw-bold mt-2">Módulos:</label><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-mapa"><label>Mapa</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-limpieza"><label>Limpieza</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-calendario" checked><label>Calendario</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-operaciones" checked><label>Operaciones</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-caja"><label>Caja</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-inventario"><label>Almacén</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-reporte"><label>Reportes</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-config"><label>Configuración</label></div><div class="form-check"><input class="form-check-input mod-check" type="checkbox" value="nav-usuarios"><label>Admin</label></div><div class="d-flex gap-2 mt-3"><button class="btn btn-primary w-100" onclick="window.funcs.guardarUsuario()">Guardar</button><button class="btn btn-outline-secondary" onclick="window.funcs.limpiarFormUsuario()">Limpiar</button></div></div></div><div class="col-md-8"><div class="card p-4 border-0 shadow-sm"><table class="table table-hover table-sm small"><thead class="table-light"><tr><th>User</th><th>Pass</th><th>Permisos</th><th></th></tr></thead><tbody id="tablaUsuarios"></tbody></table></div></div></div></div>
+            <div class="tab-pane fade" id="tab-auditoria"><div class="card p-4 border-0 shadow-sm"><div class="d-flex justify-content-between mb-3"><h6 class="fw-bold">Logs</h6><div class="d-flex gap-2"><select id="filterUser" class="form-select form-select-sm" onchange="window.funcs.renderLogs()"><option value="">Todos</option></select><input type="date" id="filterDateFrom" class="form-control form-control-sm" onchange="window.funcs.renderLogs()"><input type="date" id="filterDateTo" class="form-control form-control-sm" onchange="window.funcs.renderLogs()"><button class="btn btn-sm btn-secondary" onclick="window.funcs.imprimirLogs()">Imprimir</button></div></div><div class="table-responsive" id="printLogsArea"><table class="table table-striped table-sm log-table"><thead class="table-dark"><tr><th>Fecha</th><th>User</th><th>Acción</th><th>Detalle</th></tr></thead><tbody id="tablaLogs"></tbody></table></div></div></div>
+            <div class="tab-pane fade" id="tab-config"><div class="alert alert-info"><b>Modo Nube Activado:</b> Los datos se guardan automáticamente en Google. La opción de backup manual sigue disponible por seguridad extra.</div><div class="row g-4"><div class="col-md-5"><div class="card p-4 border-0 shadow-sm"><h6 class="fw-bold mb-3">🛠️ Copias de Seguridad Local</h6><button class="btn btn-primary w-100 mb-2" onclick="window.funcs.descargarBackup()">⬇️ DESCARGAR DATA</button></div></div><div class="col-md-7"><div class="card p-4 border-0 shadow-sm"><h6 class="fw-bold mb-3">🏨 Gestión de Habitaciones</h6><div class="input-group mb-3"><input type="number" id="confNum" class="form-control" placeholder="N° Hab"><input type="text" id="confPiso" class="form-control" placeholder="Piso/Sec"><button class="btn btn-dark" onclick="window.funcs.agregarHabitacion()">➕ Agregar</button></div><div class="table-responsive" style="max-height: 400px; overflow-y:auto;"><table class="table table-sm table-hover align-middle"><thead class="table-light"><tr><th>Hab</th><th>Piso</th><th>Acción</th></tr></thead><tbody id="bodyConfigHabs"></tbody></table></div></div></div></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevoIngreso" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden"><div class="modal-header bg-primary text-white p-4" style="background: linear-gradient(135deg, #1a2a3a 0%, #2980b9 100%);"><div><h5 class="fw-bold m-0"><i class="fas fa-concierge-bell me-2"></i>Nuevo Check-In</h5><small class="text-white-50">Registre los datos de ingreso y facturación</small></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body p-0"><div class="row g-0"><div class="col-md-7 p-4"><h6 class="text-primary fw-bold mb-3 text-uppercase small ls-1"><i class="fas fa-user-circle me-1"></i> Datos del Huésped</h6><div class="row g-2 mb-4"><div class="col-4"><label class="form-label small text-muted fw-bold">DNI / Doc</label><input type="text" id="dni" class="form-control form-control-sm bg-light" placeholder="12345678"></div><div class="col-8"><label class="form-label small text-muted fw-bold">Nombre Completo</label><input type="text" id="cliente" class="form-control form-control-sm fw-bold" placeholder="Nombre del Cliente"></div><div class="col-6"><label class="form-label small text-muted fw-bold">Celular</label><div class="input-group input-group-sm"><span class="input-group-text bg-white"><i class="fas fa-phone small text-muted"></i></span><input type="text" id="c_celular" class="form-control" placeholder="999..."></div></div><div class="col-6"><label class="form-label small text-muted fw-bold">Pax (Personas)</label><input type="number" id="numPersonas" class="form-control form-control-sm" value="1" min="1"></div></div><h6 class="text-primary fw-bold mb-3 text-uppercase small ls-1 border-top pt-3"><i class="fas fa-bed me-1"></i> Estancia</h6><div class="row g-2"><div class="col-6"><label class="form-label small text-muted fw-bold">Habitación</label><select id="habSelect" class="form-select form-select-sm fw-bold border-primary" onchange="window.funcs.checkTipoHab('mapa')"></select></div><div class="col-6"><label class="form-label small text-muted fw-bold">Tipo</label><select id="tipoHab" class="form-select form-select-sm bg-light"></select></div><div class="col-6"><label class="form-label small text-muted fw-bold">Llegada</label><input type="date" id="checkin" class="form-control form-control-sm"></div><div class="col-6"><label class="form-label small text-muted fw-bold">Salida</label><input type="date" id="checkout" class="form-control form-control-sm"></div></div></div><div class="col-md-5 bg-light p-4 border-start d-flex flex-column justify-content-between"><div><h6 class="text-success fw-bold mb-3 text-uppercase small ls-1"><i class="fas fa-file-invoice-dollar me-1"></i> Facturación</h6><div class="card border-0 shadow-sm mb-3"><div class="card-body p-3"><label class="small fw-bold mb-1 text-muted">Monto Total</label><div class="input-group mb-3"><span class="input-group-text bg-white border-end-0 fw-bold text-success">S/</span><input type="number" id="total" class="form-control border-start-0 fs-4 fw-bold text-dark" value="0"></div><div class="mb-3"><label class="small text-muted fw-bold">Estado del Pago</label><select id="pagoEstado" class="form-select form-select-sm fw-bold" onchange="window.funcs.toggleAdelanto()"><option value="Falta Pagar" class="text-danger">🔴 Falta Pagar</option><option value="Pagado" class="text-success">🟢 Pagado Completo</option><option value="Adelanto" class="text-warning">🟠 Dejar Adelanto</option></select></div><div id="divAdelanto" style="display:none;" class="mb-3 p-2 bg-warning bg-opacity-10 rounded border border-warning"><label class="small fw-bold text-dark">Monto Adelanto</label><div class="input-group input-group-sm"><span class="input-group-text bg-white text-dark">S/</span><input type="number" id="adelanto" class="form-control fw-bold" value="0"></div></div><div><label class="small text-muted fw-bold">Medio de Pago</label><select id="medioPago" class="form-select form-select-sm"><option>Efectivo</option><option>Yape</option><option>Plin</option><option>Tarjeta</option><option>Transferencia</option></select></div></div></div></div><button class="btn btn-primary w-100 py-3 fw-bold shadow hover-effect" onclick="window.funcs.guardarReserva()"><i class="fas fa-check-circle me-2"></i> CONFIRMAR RESERVA</button></div></div></div></div></div></div>
+<div class="modal fade" id="modalH" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg"><div id="mh" class="modal-header detail-header"><h5 id="mt" class="fw-bold m-0 text-dark"><i class="fas fa-door-open me-2 text-primary"></i>Detalle Habitación</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0" id="mb"></div></div></div></div>
+<div class="modal fade" id="modalResCal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-primary text-white"><h5 class="fw-bold m-0">➕ Nueva Reserva (Cal)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-2"><div class="col-12"><label class="small fw-bold">Nombre</label><input type="text" id="c_cliente" class="form-control form-control-sm"></div><div class="col-8"><label class="small fw-bold">DNI</label><input type="text" id="c_dni" class="form-control form-control-sm"></div><div class="col-4"><label class="small fw-bold">Personas</label><input type="number" id="c_numPersonas" class="form-control form-control-sm" value="1" min="1"></div><div class="col-12"><label class="small fw-bold">Celular</label><input type="text" id="c_celular_cal" class="form-control form-control-sm"></div><div class="col-6"><label class="small fw-bold">Habitación</label><select id="c_habSelect" class="form-select form-select-sm" onchange="window.funcs.checkTipoHab('cal')"></select></div><div class="col-6"><label class="small fw-bold">Tipo</label><select id="c_tipoHab" class="form-select form-select-sm"></select></div><div class="col-6"><label class="small fw-bold">Ingreso</label><input type="date" id="c_in" class="form-control form-control-sm"></div><div class="col-6"><label class="small fw-bold">Salida</label><input type="date" id="c_out" class="form-control form-control-sm"></div><div class="col-6"><label class="small fw-bold">Total S/</label><input type="number" id="c_total" class="form-control form-control-sm" value="0"></div><div class="col-6"><label class="small fw-bold">Medio</label><select id="c_medioPago" class="form-select form-select-sm"><option>Efectivo</option><option>Yape</option><option>Plin</option><option>Tarjeta</option></select></div><div class="col-12"><label class="small fw-bold">Pago</label><select id="c_pagoEstado" class="form-select form-select-sm" onchange="window.funcs.toggleAdelantoCal()"><option value="Falta Pagar">Falta Pagar</option><option value="Pagado">Pagado</option><option value="Adelanto">Adelanto</option></select></div><div class="col-12" id="divAdelantoCal" style="display:none;"><label class="small fw-bold">Adelanto S/</label><input type="number" id="c_adelanto" class="form-control form-control-sm" value="0"></div></div><div class="col-12"><button class="btn btn-primary w-100 fw-bold mt-3" onclick="window.funcs.guardarReservaCal()">Confirmar</button></div></div></div></div></div>
+
+<script type="module">
+    // --- INTEGRACIÓN FIREBASE v9 (MODULE) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // --- 1. PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyBL05JC0LZ9IWBA3fzf1MGMZxj2opbumhY",
+  authDomain: "sumaj-system.firebaseapp.com",
+  projectId: "sumaj-system",
+  storageBucket: "sumaj-system.firebasestorage.app",
+  messagingSenderId: "1010435012694",
+  appId: "1:1010435012694:web:fa471c7231a6036c08e3f7"
+};
+
+    // --- INICIALIZAR APP ---
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const DB_COLLECTION = "sumaj_data"; // Colección principal
+    const DB_DOC = "hotel_db";          // Documento único (Modelo simple)
+
+    // --- VARIABLES GLOBALES ---
+    let defaultHabs = [
+        {num:101, piso:'Piso 1'}, {num:102, piso:'Piso 1'}, {num:103, piso:'Piso 1'}, {num:104, piso:'Piso 1'}, {num:105, piso:'Piso 1'}, {num:106, piso:'Piso 1'}, {num:107, piso:'Piso 1'}, {num:108, piso:'Piso 1'},
+        {num:201, piso:'Piso 2'}, {num:202, piso:'Piso 2'}, {num:203, piso:'Piso 2'}, {num:204, piso:'Piso 2'}, {num:205, piso:'Piso 2'}, {num:206, piso:'Piso 2'}, {num:207, piso:'Piso 2'}, {num:208, piso:'Piso 2'},
+        {num:1, piso:'Departamento', tipo:'Familiar'}, 
+        {num:2, piso:'Departamento', tipo:'Matrimonial Vista'}, 
+        {num:3, piso:'Departamento', tipo:'Matrimonial'},
+        {num:4, piso:'Muelle', tipo:'Matrimonial Muelle'}, 
+        {num:5, piso:'Muelle', tipo:'Matrimonial Muelle'}
+    ];
+
+    // Estados Locales (Se llenan desde la nube)
+    let habs = defaultHabs;
+    let ress = [];
+    let historial = [];
+    let inventario = [];
+    let caja = [];
+    let users = [{ user: 'admin', pass: 'admin707', modules: ['all'] }];
+    let logs = [];
+    let limpieza = {};
+    
+    let currentUser = null;
+    let modalInstance = null;
+    let modalResCal = null;
+    let modalNuevoIngreso = null; 
+    let showPass = false;
+    let calDate = new Date(); 
+    const { jsPDF } = window.jspdf;
+    
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - offset);
+    const hoy = localDate.toISOString().split('T')[0];
+
+    // --- SINCRONIZACIÓN NUBE (CORE) ---
+    
+    // Función para subir cambios a Firebase (reemplaza a localStorage.setItem)
+    async function saveToCloud() {
+        document.getElementById('cloudLoader').style.display = 'block';
+        try {
+            await setDoc(doc(db, DB_COLLECTION, DB_DOC), {
+                habs, ress, historial, inventario, caja, users, logs, limpieza,
+                lastUpdate: new Date().toISOString()
+            });
+            // Backup local por seguridad
+            localStorage.setItem('sumaj_backup', JSON.stringify({habs, ress, historial, inventario, caja, users, logs, limpieza}));
+        } catch (e) {
+            console.error("Error guardando en nube:", e);
+            alert("⚠️ Error de conexión. Verifique internet.");
+        }
+        document.getElementById('cloudLoader').style.display = 'none';
+    }
+
+    // Listener en Tiempo Real (Cuando algo cambia en la nube, se actualiza aquí)
+    function initRealtimeListener() {
+        onSnapshot(doc(db, DB_COLLECTION, DB_DOC), (docSnap) => {
+            if (docSnap.exists()) {
+                const d = docSnap.data();
+                habs = d.habs || defaultHabs;
+                ress = d.ress || [];
+                historial = d.historial || [];
+                inventario = d.inventario || [];
+                caja = d.caja || [];
+                users = d.users || users;
+                logs = d.logs || [];
+                limpieza = d.limpieza || {};
+                
+                // Refrescar Pantallas si el usuario está logueado
+                if(currentUser) {
+                    funcs.actualizarPantalla();
+                    funcs.renderCal();
+                    funcs.renderLimpieza();
+                    if(document.getElementById('tab-caja').classList.contains('active')) funcs.renderCaja();
+                }
+            } else {
+                // Primera vez: Crear documento vacío
+                saveToCloud(); 
+            }
+        });
+    }
+
+    // --- FUNCIONES EXPORTADAS A WINDOW (Para que el HTML las vea) ---
+    const funcs = {
+        login: () => {
+            const u = document.getElementById('loginUser').value;
+            const p = document.getElementById('loginPass').value;
+            const userFound = users.find(x => x.user === u && x.pass === p);
+            if (userFound) {
+                currentUser = userFound;
+                // No guardamos sesión persistente por seguridad en esta versión básica
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appInterface').style.display = 'block';
+                document.getElementById('userDisplay').innerText = `👤 ${currentUser.user.toUpperCase()}`;
+                funcs.aplicarPermisos();
+                funcs.registrarLog("LOGIN", "Ingreso al sistema");
+                funcs.initSystem();
+            } else { alert("Credenciales incorrectas"); }
+        },
+        logout: () => { location.reload(); },
+        
+        aplicarPermisos: () => {
+            document.querySelectorAll('.nav-item').forEach(el => el.style.display = 'none');
+            let firstTab = null;
+            if (currentUser.modules.includes('all')) {
+                document.querySelectorAll('.nav-item').forEach(el => el.style.display = 'block');
+                firstTab = '#tab-mapa';
+            } else {
+                currentUser.modules.forEach(modId => {
+                    const el = document.getElementById(modId);
+                    if(el) { el.style.display = 'block'; if(!firstTab) firstTab = el.querySelector('button').getAttribute('data-bs-target'); }
+                });
+            }
+            if(firstTab) { const triggerEl = document.querySelector(`button[data-bs-target="${firstTab}"]`); if(triggerEl) bootstrap.Tab.getOrCreateInstance(triggerEl).show(); }
+        },
+
+        initSystem: () => {
+            document.getElementById('checkin').value = hoy; document.getElementById('checkout').value = hoy;
+            document.getElementById('filtroFecha').value = hoy; document.getElementById('fechaOp').value = hoy;
+            calDate = new Date(); calDate.setDate(1); 
+            funcs.actualizarPantalla(); funcs.renderConfigHabs(); funcs.renderCal(); 
+            if(funcs.checkPermiso('nav-reporte')) funcs.actualizarReporte(); 
+            if(funcs.checkPermiso('nav-caja')) funcs.renderCaja(); 
+            if(funcs.checkPermiso('nav-inventario')) funcs.renderInventario();
+            if(funcs.checkPermiso('nav-usuarios')) { funcs.renderUsuarios(); funcs.renderLogs(); }
+            funcs.renderLimpieza();
+            setInterval(()=>document.getElementById('reloj').innerText=new Date().toLocaleString(),1000);
+        },
+
+        registrarLog: (accion, detalle) => {
+            logs.unshift({ dateIso: new Date().toISOString(), dateStr: new Date().toLocaleString(), user: currentUser ? currentUser.user : 'system', action: accion, details: detalle });
+            if(logs.length > 500) logs.pop(); // Limitar logs para no saturar Firestore
+            saveToCloud(); // Guardar
+        },
+
+        checkPermiso: (modId) => { return currentUser.modules.includes('all') || currentUser.modules.includes(modId); },
+        verificarPermisoAdmin: () => { if (currentUser.modules.includes('all') || currentUser.user === 'admin') return true; alert("⛔ Acceso Denegado"); return false; },
+
+        // --- GESTIÓN DE RESERVAS ---
+        abrirModalNuevaReserva: () => {
+            if(!modalNuevoIngreso) modalNuevoIngreso = new bootstrap.Modal(document.getElementById('modalNuevoIngreso'));
+            document.getElementById('cliente').value = '';
+            document.getElementById('dni').value = '';
+            document.getElementById('numPersonas').value = '1';
+            document.getElementById('c_celular').value = '';
+            document.getElementById('total').value = '0';
+            document.getElementById('adelanto').value = '0';
+            document.getElementById('checkin').value = hoy;
+            document.getElementById('checkout').value = hoy;
+            funcs.toggleAdelanto();
+            funcs.checkTipoHab('mapa');
+            modalNuevoIngreso.show();
+        },
+
+        guardarReserva: () => { 
+            const d=(id)=>document.getElementById(id).value; 
+            const t=parseFloat(d('total'))||0; 
+            let ad=d('pagoEstado')==='Pagado'?t:(d('pagoEstado')==='Adelanto'?parseFloat(d('adelanto')):0); 
+            if(!d('cliente'))return alert("Falta nombre"); 
+            const selHab = parseInt(d('habSelect'));
+            let tipo = d('tipoHab');
+            if(document.getElementById('tipoHab').disabled) { const hObj = habs.find(h=>h.num === selHab); if(hObj) tipo = hObj.tipo; }
+            if(limpieza[selHab]==='sucia'||limpieza[selHab]==='limpieza'){if(!confirm("Habitación Sucia/Limpieza. ¿Asignar?"))return;} 
+            if(!funcs.validarDisponibilidad(selHab,d('checkin'),d('checkout')))return alert("Ocupado"); 
+            ress.push({id:Date.now(),cliente:d('cliente'),dni:d('dni'),personas:d('numPersonas'),celular:d('c_celular'),habNum:selHab,tipo:tipo,in:d('checkin'),out:d('checkout'),total:t,adelanto:ad,medioPago:d('medioPago'),consumos:[]}); 
+            saveToCloud();
+            funcs.registrarLog("RESERVA",`Hab ${d('habSelect')} - ${d('cliente')}`); 
+            if(modalNuevoIngreso) modalNuevoIngreso.hide();
+        },
+
+        validarDisponibilidad: (h, i, o, excludeId = null) => {
+            return !ress.some(r => {
+                if(excludeId && r.id === excludeId) return false;
+                return r.habNum == h && i < r.out && o > r.in;
+            });
+        },
+
+        // --- EDICIÓN ---
+        editarReserva: (id) => {
+            const r = ress.find(x => x.id == id);
+            if(!r) return;
+            const htmlForm = `<div class="row g-3 p-4"><h5 class="fw-bold mb-3 border-bottom pb-2">Editar Reserva</h5><div class="col-md-6"><label class="small fw-bold">Nombre</label><input type="text" id="edit_cliente" class="form-control" value="${r.cliente}"></div><div class="col-md-6"><label class="small fw-bold">DNI</label><input type="text" id="edit_dni" class="form-control" value="${r.dni||''}"></div><div class="col-md-6"><label class="small fw-bold">Celular</label><input type="text" id="edit_celular" class="form-control" value="${r.celular||''}"></div><div class="col-md-6"><label class="small fw-bold">Pax</label><input type="number" id="edit_personas" class="form-control" value="${r.personas||1}"></div><div class="col-md-6"><label class="small fw-bold">IN</label><input type="date" id="edit_in" class="form-control" value="${r.in}"></div><div class="col-md-6"><label class="small fw-bold">OUT</label><input type="date" id="edit_out" class="form-control" value="${r.out}"></div><div class="col-md-12"><label class="small fw-bold">Total S/</label><input type="number" id="edit_total" class="form-control fw-bold" value="${r.total}"></div><div class="col-12 mt-4 d-flex gap-2"><button class="btn btn-primary w-100" onclick="window.funcs.guardarEdicion(${r.id})">Guardar</button><button class="btn btn-secondary w-100" onclick="window.funcs.verDetalle(${r.habNum}, ${r.id})">Cancelar</button></div></div>`;
+            document.getElementById('mb').innerHTML = htmlForm;
+        },
+
+        guardarEdicion: (id) => {
+            const r = ress.find(x => x.id == id);
+            if(!r) return;
+            const nC=document.getElementById('edit_cliente').value, nD=document.getElementById('edit_dni').value, nCel=document.getElementById('edit_celular').value, nP=document.getElementById('edit_personas').value, nI=document.getElementById('edit_in').value, nO=document.getElementById('edit_out').value, nT=parseFloat(document.getElementById('edit_total').value)||0;
+            if(!nC) return alert("Falta nombre");
+            if(!funcs.validarDisponibilidad(r.habNum, nI, nO, r.id)) return alert("Conflicto de fechas");
+            r.cliente=nC; r.dni=nD; r.celular=nCel; r.personas=nP; r.in=nI; r.out=nO; r.total=nT;
+            saveToCloud();
+            funcs.registrarLog("EDITAR", `Reserva ${r.id} modif`);
+            funcs.verDetalle(r.habNum, r.id);
+        },
+
+        // --- MAPA Y VISTAS ---
+        actualizarPantalla: () => {
+            const f = document.getElementById('filtroFecha').value;
+            const grid = document.getElementById('gridHabitaciones');
+            const select = document.getElementById('habSelect');
+            const selectCal = document.getElementById('c_habSelect'); 
+            grid.innerHTML = ''; select.innerHTML = ''; if(selectCal) selectCal.innerHTML = '';
+            const pisos = [...new Set(habs.map(h => h.piso))].sort();
+            pisos.forEach(p => { 
+                const label = String(p).includes('Piso') ? p : `SECCIÓN ${p.toUpperCase()}`;
+                grid.innerHTML += `<div class="col-12"><div class="piso-header mb-2">${label}</div></div>`; 
+                const groupHabs = habs.filter(h => h.piso === p).sort((a,b)=>a.num-b.num);
+                groupHabs.forEach(h => {
+                    const r = ress.find(x => x.habNum == h.num && (f >= x.in && f < x.out));
+                    const stL = limpieza[h.num] || 'limpia';
+                    let cc = 'hab-card', sb = '<span class="badge bg-success">Libre</span>', info = `<div class="small text-muted">Disponible</div>`;
+                    if (r) {
+                        const tC = (r.consumos||[]).reduce((a,b)=>a+(b.precio*b.cantidad),0), deu = (r.total + tC) - r.adelanto;
+                        cc += ' status-ocupado'; sb = `<span class="badge bg-danger">Ocupado</span>`; info = `<div class="small fw-bold text-primary text-truncate">${r.cliente}</div>${deu > 0.1 ? `<div class="small text-danger fw-bold">Deuda: S/ ${deu.toFixed(2)}</div>` : `<div class="small text-success fw-bold">Pagado</div>`}`;
+                    } else if (stL === 'sucia') { cc += ' status-sucia'; sb = `<span class="badge bg-warning text-dark">Sucia</span>`; info = `<div class="small text-warning fw-bold">Limpieza Pendiente</div>`; } 
+                    else if (stL === 'limpieza') { cc += ' status-limpieza'; sb = `<span class="badge bg-primary">Limpieza</span>`; info = `<div class="small text-primary fw-bold">Limpiando...</div>`; } 
+                    else { cc += ' status-disponible'; }
+                    const dN = h.piso.includes('Piso') ? h.num : String(h.num).padStart(3, '0');
+                    grid.innerHTML += `<div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 mb-3"><div class="${cc} p-3" onclick="window.funcs.verDetalle(${h.num}, ${r?r.id:null})"><div class="d-flex justify-content-between mb-1"><b class="fs-5">${dN}</b>${sb}</div>${h.tipo ? `<div style="font-size:0.7rem" class="text-muted text-truncate">${h.tipo}</div>` : ''}${info}</div></div>`;
+                    const opt = `<option value="${h.num}">${dN} ${h.tipo?`(${h.tipo})`:''}</option>`;
+                    select.innerHTML += opt; if(selectCal) selectCal.innerHTML += opt;
+                });
+            });
+            funcs.checkTipoHab('mapa');
+        },
+
+        checkTipoHab: (origin) => {
+            const habId = origin === 'mapa' ? 'habSelect' : 'c_habSelect';
+            const tipoId = origin === 'mapa' ? 'tipoHab' : 'c_tipoHab';
+            const selHab = parseInt(document.getElementById(habId).value);
+            const selTipo = document.getElementById(tipoId);
+            const habitacion = habs.find(h => h.num === selHab);
+            if (habitacion) {
+                if (habitacion.piso === 'Departamento' || habitacion.piso === 'Muelle') { selTipo.innerHTML = `<option value="${habitacion.tipo}" selected>${habitacion.tipo}</option>`; selTipo.disabled = true; } 
+                else { selTipo.disabled = false; selTipo.innerHTML = `<option>Simple</option><option>Matrimonial</option><option>Doble</option><option>Triple</option><option>Suite</option>`; }
+            }
+        },
+
+        // --- OPERACIONES ---
+        checkOut: (id,d) => {
+            if(d>0.1)return alert("⚠️ Hay deuda.");
+            if(!confirm("¿Finalizar y marcar SUCIA?"))return;
+            const r=ress.find(x=>x.id==id);
+            const tC=(r.consumos||[]).reduce((a,b)=>a+(b.precio*b.cantidad),0);
+            r.totalFinal=r.total+tC; r.fechaCierre=new Date().toLocaleString();
+            limpieza[r.habNum] = 'sucia';
+            historial.push(r); ress=ress.filter(x=>x.id!==id);
+            saveToCloud();
+            funcs.registrarLog("CHECK_OUT", `Hab ${r.habNum}`);
+            modalInstance.hide();
+        },
+
+        verDetalle: (num,id,isH) => {
+            if(!modalInstance)modalInstance=new bootstrap.Modal(document.getElementById('modalH'));
+            let r; if(id) r = isH ? historial.find(x=>x.id==id) : ress.find(x=>x.id==id); else { const f=document.getElementById('filtroFecha').value; r=ress.find(x=>x.habNum==num&&(f>=x.in&&f<=x.out)); }
+            if(!r){
+                const st=limpieza[num]||'limpia'; let b='', icon='';
+                if(st==='sucia') { b=`<button class="btn btn-primary w-100" onclick="window.funcs.setEstadoLimpieza(${num},'limpieza');modalInstance.hide()">Empezar Limpieza</button>`; icon='<i class="fas fa-broom fa-3x text-warning mb-3"></i>'; }
+                else if(st==='limpieza') { b=`<button class="btn btn-success w-100" onclick="window.funcs.setEstadoLimpieza(${num},'limpia');modalInstance.hide()">Terminar Limpieza</button>`; icon='<i class="fas fa-pump-soap fa-3x text-primary mb-3"></i>'; }
+                else { b=`<button class="btn btn-warning w-100" onclick="window.funcs.setEstadoLimpieza(${num},'sucia');modalInstance.hide()">Marcar Sucia</button>`; icon='<i class="fas fa-check-circle fa-3x text-success mb-3"></i>'; }
+                document.getElementById('mt').innerHTML = `<span class="badge bg-secondary">Hab ${num}</span> Estado`;
+                document.getElementById('mb').innerHTML=`<div class="text-center py-5">${icon}<h5>${st.toUpperCase()}</h5><div class="mt-4 px-5">${b}</div></div>`;
+                modalInstance.show(); return;
+            }
+            const cons = r.consumos || [], tCons = cons.reduce((a,b)=>a+(b.precio*b.cantidad),0), granT = isH ? r.totalFinal : (r.total+tCons), deu = isH ? 0 : (granT-r.adelanto);
+            const hBtn = isH ? 'display:none' : '';
+            let ops = '<option value="">Agregar...</option>'; inventario.forEach(p => ops += `<option value="${p.id}">${p.nombre} - S/${p.precio}</option>`);
+            let badgeEstado = ''; if(isH) badgeEstado = '<span class="badge bg-secondary">Historial</span>'; else if(deu < 0.1) badgeEstado = '<span class="badge bg-success">Pagado</span>'; else badgeEstado = '<span class="badge bg-danger">Falta Pago</span>';
+            document.getElementById('mt').innerHTML = `<div class="d-flex align-items-center gap-2"><span class="badge bg-dark fs-5">HAB ${num}</span>${badgeEstado}</div>`;
+            let html = `<div class="row g-0"><div class="col-lg-7 p-4 border-end"><div class="d-flex justify-content-between align-items-center mb-2"><div class="detail-label">Huésped</div>${!isH ? `<button class="btn btn-sm btn-outline-primary py-0" style="font-size:0.7rem;" onclick="window.funcs.editarReserva(${r.id})"><i class="fas fa-edit"></i> Editar</button>` : ''}</div><div class="row g-3 mb-4"><div class="col-12"><div class="detail-value fs-5"><i class="fas fa-user-circle text-secondary me-2"></i>${r.cliente}</div></div><div class="col-6"><div class="detail-label">Check-In</div><div class="detail-value text-success">${r.in}</div></div><div class="col-6"><div class="detail-label">Check-Out</div><div class="detail-value text-danger">${r.out}</div></div><div class="col-6"><div class="detail-label">Pax</div><div class="detail-value">${r.personas}</div></div><div class="col-6"><div class="detail-label">Contacto</div><div class="detail-value">${r.celular||'-'}</div></div></div><hr class="text-muted opacity-25"><h6 class="fw-bold m-0 text-primary mb-2">Consumos</h6><div class="input-group input-group-sm mb-3" style="${hBtn}"><select id="selP" class="form-select border-primary">${ops}</select><input id="selQ" type="number" value="1" class="form-control border-primary" style="max-width: 60px;"><button class="btn btn-primary" onclick="window.funcs.addCons(${r.id})">+</button></div><div class="table-responsive border rounded bg-white" style="max-height: 200px; overflow-y:auto;"><table class="table table-sm table-striped m-0 cons-table"><thead><tr><th>Cant</th><th>Item</th><th class="text-end">Total</th><th class="text-center" style="${hBtn}">X</th></tr></thead><tbody>${cons.length > 0 ? cons.map((c,i) => `<tr><td class="text-center fw-bold">${c.cantidad}</td><td>${c.item}</td><td class="text-end">S/ ${(c.precio*c.cantidad).toFixed(2)}</td><td class="text-center" style="${hBtn}"><i class="fas fa-trash text-danger cursor-pointer" onclick="window.funcs.delCons(${r.id},${i})"></i></td></tr>`).join('') : '<tr><td colspan="4" class="text-center text-muted small">Sin consumos</td></tr>'}</tbody></table></div></div><div class="col-lg-5 p-4 bg-light d-flex flex-column"><h6 class="fw-bold text-dark mb-3">Finanzas</h6><div class="total-box mb-4 shadow-sm"><div class="d-flex justify-content-between mb-1"><span class="text-muted">Aloj:</span><span class="fw-bold">S/ ${r.total.toFixed(2)}</span></div><div class="d-flex justify-content-between mb-2"><span class="text-muted">Cons:</span><span class="fw-bold">S/ ${tCons.toFixed(2)}</span></div><hr class="my-2"><div class="d-flex justify-content-between mb-1"><span class="fs-5 fw-bold text-dark">TOTAL:</span><span class="fs-5 fw-bold text-dark">S/ ${granT.toFixed(2)}</span></div><div class="d-flex justify-content-between mb-1"><span class="text-success fw-bold">Pagado:</span><span class="text-success fw-bold">- S/ ${r.adelanto.toFixed(2)}</span></div><div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top"><span class="fw-bold text-danger">DEUDA:</span><span class="${deu > 0.1 ? 'debt-high' : 'debt-ok'}">S/ ${deu.toFixed(2)}</span></div></div><div class="mt-auto d-grid gap-2">${!isH && deu > 0.1 ? `<button class="btn btn-success fw-bold py-2 shadow-sm" onclick="window.funcs.pay(${r.id},${deu})">COBRAR</button>` : ''}<div class="btn-group" role="group"><button class="btn btn-outline-secondary" onclick="window.funcs.printR(${r.id},${isH})"><i class="fas fa-print"></i></button>${!isH ? `<button class="btn btn-outline-success" onclick="window.funcs.enviarWhatsapp(${r.id})"><i class="fab fa-whatsapp"></i></button>` : ''}</div>${!isH ? `<button class="btn btn-dark fw-bold py-2 mt-2" onclick="window.funcs.checkOut(${r.id},${deu})">CHECKOUT</button>` : ''}</div></div></div>`;
+            document.getElementById('mb').innerHTML = html; modalInstance.show();
+        },
+
+        // --- UTILIDADES ---
+        setEstadoLimpieza: (num, estado) => { limpieza[num] = estado; saveToCloud(); funcs.registrarLog("LIMPIEZA", `Hab ${num} a ${estado}`); },
+        addCons: (id) => { const pid=parseInt(document.getElementById('selP').value),q=parseInt(document.getElementById('selQ').value);const p=inventario.find(i=>i.id===pid);if(p.tipo==='producto'&&p.stock<q)return alert("Sin stock");if(p.tipo==='producto'){p.stock-=q;saveToCloud();}const r=ress.find(x=>x.id==id);if(!r.consumos)r.consumos=[];r.consumos.push({idProd:p.id,item:p.nombre,precio:p.precio,cantidad:q,tipo:p.tipo});saveToCloud();funcs.verDetalle(r.habNum,id); },
+        delCons: (id,i) => { const r=ress.find(x=>x.id==id),it=r.consumos[i];if(it.idProd&&it.tipo==='producto'){const p=inventario.find(x=>x.id===it.idProd);if(p){p.stock+=it.cantidad;}}r.consumos.splice(i,1);saveToCloud();funcs.verDetalle(r.habNum,id); },
+        pay: (id,m) => { if(confirm("¿Cobrar?")){const r=ress.find(x=>x.id==id);r.adelanto+=m;saveToCloud();funcs.verDetalle(r.habNum,id);funcs.renderCal();} },
+        enviarWhatsapp: (id) => { const r = ress.find(x => x.id == id); if (!r) return; const msg = `*HOLA, ${r.cliente.toUpperCase()}* 🌴%0AConfirmado:%0A📅 IN: ${r.in}%0A📅 OUT: ${r.out}%0A🏠 Hab: ${r.habNum}%0A💰 Total: S/ ${r.total}%0A💵 A cuenta: S/ ${r.adelanto}`; let cel = r.celular.replace(/\D/g, ''); if (cel.length === 9) cel = '51' + cel; window.open(`https://wa.me/${cel}?text=${msg}`, '_blank'); },
+        printR: (id,isH) => { const r=isH?historial.find(x=>x.id==id):ress.find(x=>x.id==id); const w=window.open('','P','height=600,width=400'); w.document.write(`<b>${r.cliente}</b><br>Hab: ${r.habNum}<br>Total: ${r.total}`); w.print(); },
+        
+        // --- CALENDARIO, CAJA, ETC ---
+        renderCal: () => { const t = document.getElementById('tablaCal'); t.innerHTML = ''; const y = calDate.getFullYear(), m = calDate.getMonth(), days = new Date(y, m + 1, 0).getDate(); document.getElementById('calMesTitulo').innerText = `${["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][m]} ${y}`; let head = '<thead><tr><th class="cal-room-col">HAB</th>'; const ds = []; for(let i=1;i<=days;i++){ const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; ds.push(iso); head+=`<th class="${iso===hoy?'cal-today-col':''}">${i}</th>`; } head+='</tr></thead><tbody>'; habs.forEach(h => { head+=`<tr><td class="cal-room-col">${h.piso.includes('Piso')?h.num:h.num}</td>`; ds.forEach(d => { const r=ress.find(x=>x.habNum==h.num&&d>=x.in&&d<x.out); head+=`<td class="cal-cell" style="background:${r?'var(--ocupado)':'white'}" onclick="window.funcs.verDetalle(${h.num},${r?r.id:null})"></td>`; }); head+='</tr>'; }); t.innerHTML=head+'</tbody>'; },
+        navMes: (d) => { calDate.setMonth(calDate.getMonth() + d); calDate.setDate(1); funcs.renderCal(); },
+        
+        guardarMovimientoCaja: () => { const t=document.getElementById('cajaTipo').value,d=document.getElementById('cajaDesc').value,m=parseFloat(document.getElementById('cajaMonto').value);if(!d||!m)return;caja.push({id:Date.now(),fecha:new Date().toLocaleString(),tipo:t,cat:document.getElementById('cajaCat').value,desc:d,monto:m});saveToCloud();funcs.renderCaja();document.getElementById('cajaDesc').value='';document.getElementById('cajaMonto').value=''; },
+        renderCaja: () => { const t=document.getElementById('bodyCaja');t.innerHTML='';let s=0;[...caja].reverse().forEach(m=>{if(m.tipo==='ingreso')s+=m.monto;else s-=m.monto;t.innerHTML+=`<tr><td>${m.fecha.split(',')[0]}</td><td>${m.tipo}</td><td>${m.cat}</td><td>${m.desc}</td><td>S/${m.monto}</td><td><button class="btn btn-sm text-danger" onclick="window.funcs.delCaja(${m.id})">x</button></td></tr>`;});document.getElementById('cajaSaldo').innerText=`S/${s.toFixed(2)}`; },
+        delCaja: (id) => { if(funcs.verificarPermisoAdmin()&&confirm("Borrar?")){caja=caja.filter(x=>x.id!==id);saveToCloud();funcs.renderCaja();} },
+        agregarProducto: () => { if(!funcs.checkPermiso('nav-inventario'))return;const t=document.getElementById('invTipo').value,n=document.getElementById('invNombre').value,p=parseFloat(document.getElementById('invPrecio').value);let s=parseInt(document.getElementById('invStock').value);if(!n)return;if(t==='servicio')s=9999;inventario.push({id:Date.now(),nombre:n,precio:p,stock:s,tipo:t});saveToCloud();funcs.renderInventario(); },
+        renderInventario: () => { const t=document.getElementById('tablaInventario');t.innerHTML='';inventario.forEach(p=>{t.innerHTML+=`<tr><td>${p.nombre}</td><td>${p.tipo}</td><td>${p.precio}</td><td>${p.tipo==='servicio'?'-':p.stock}</td><td><button class="btn btn-sm btn-danger" onclick="window.funcs.delInv(${p.id})">x</button></td></tr>`;}); },
+        delInv: (id) => { if(funcs.verificarPermisoAdmin()&&confirm("Borrar?")){inventario=inventario.filter(x=>x.id!==id);saveToCloud();funcs.renderInventario();} },
+        actualizarReporte: () => { const t=document.getElementById('tablaHistorial');t.innerHTML='';const d=document.getElementById('hist_desde').value,h_=document.getElementById('hist_hasta').value;let c=0,p=0,g=0;historial.filter(h=>(!d||h.in>=d)&&(!h_||h.in<=h_)).forEach(h=>{c+=h.adelanto;t.innerHTML+=`<tr><td>${h.habNum}</td><td>${h.personas}</td><td>${h.cliente}</td><td>${h.in}</td><td>${h.totalFinal}</td><td>${h.adelanto}</td><td>${h.fechaCierre}</td></tr>`;});caja.forEach(x=>{if(x.tipo==='egreso')g+=x.monto;else c+=x.monto;});document.getElementById('dashCobrado').innerText=c;document.getElementById('dashGastos').innerText=g;document.getElementById('dashUtilidad').innerText=(c-g); },
+        actualizarOperaciones: () => { const f=document.getElementById('fechaOp').value,i=document.getElementById('listIn'),o=document.getElementById('listOut');i.innerHTML='';o.innerHTML='';ress.forEach(r=>{let h=`<div class="op-card ${r.in===f?'op-in':'op-out'}"><b>${r.habNum}</b> ${r.cliente}</div>`;if(r.in===f)i.innerHTML+=h;if(r.out===f)o.innerHTML+=h;}); },
+        
+        // Helpers UI
+        toggleAdelanto: () => { document.getElementById('divAdelanto').style.display=document.getElementById('pagoEstado').value==='Adelanto'?'block':'none'; },
+        toggleAdelantoCal: () => { document.getElementById('divAdelantoCal').style.display=document.getElementById('c_pagoEstado').value==='Adelanto'?'block':'none'; },
+        toggleStockInput: () => { const t=document.getElementById('invTipo').value;document.getElementById('divStockInput').style.display=t==='servicio'?'none':'block'; },
+        limpiarFormUsuario: () => { document.getElementById('newUserName').value=''; document.getElementById('newUserPass').value=''; document.getElementById('editUserIndex').value='-1'; },
+        guardarUsuario: () => { if(!funcs.verificarPermisoAdmin())return;const u=document.getElementById('newUserName').value,p=document.getElementById('newUserPass').value,idx=parseInt(document.getElementById('editUserIndex').value);if(!u||!p)return;const m=Array.from(document.querySelectorAll('.mod-check:checked')).map(x=>x.value);if(idx===-1)users.push({user:u,pass:p,modules:m});else{users[idx].user=u;users[idx].pass=p;users[idx].modules=m;}saveToCloud();funcs.renderUsuarios();funcs.limpiarFormUsuario(); },
+        renderUsuarios: () => { const t=document.getElementById('tablaUsuarios');t.innerHTML='';users.forEach((u,i)=>{t.innerHTML+=`<tr><td>${u.user}</td><td>***</td><td>${u.modules.length}</td><td>${u.user!=='admin'?`<button class="btn btn-sm btn-info" onclick="window.funcs.editUser(${i})">E</button><button class="btn btn-sm btn-danger" onclick="window.funcs.delUser('${u.user}')">x</button>`:''}</td></tr>`}); },
+        editUser: (i) => { const u=users[i];document.getElementById('editUserIndex').value=i;document.getElementById('newUserName').value=u.user;document.getElementById('newUserPass').value=u.pass;document.querySelectorAll('.mod-check').forEach(c=>c.checked=u.modules.includes(c.value)||u.modules.includes('all')); },
+        delUser: (u) => { if(funcs.verificarPermisoAdmin()&&confirm("Borrar?")){users=users.filter(x=>x.user!==u);saveToCloud();funcs.renderUsuarios();} },
+        renderLogs: () => { const t=document.getElementById('tablaLogs');t.innerHTML='';logs.forEach(l=>{t.innerHTML+=`<tr><td>${l.dateStr}</td><td>${l.user}</td><td>${l.action}</td><td>${l.details}</td></tr>`;}); },
+        imprimirLogs: () => { const w=window.open('');w.document.write(document.getElementById('printLogsArea').innerHTML);w.print(); },
+        exportarExcel: () => { const t=document.getElementById('tablaHistorialHTML').outerHTML; const u='data:application/vnd.ms-excel;base64,'; const tmpl='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table>{table}</table></body></html>'; const b64=s=>window.btoa(unescape(encodeURIComponent(s))); const fmt=(s,c)=>s.replace(/{(\w+)}/g,(m,p)=>c[p]); const link=document.createElement("a"); link.href=u+b64(fmt(tmpl,{table:t})); link.download=`Reporte_${new Date().toISOString().split('T')[0]}.xls`; link.click(); },
+        
+        // Config Hab
+        renderConfigHabs: () => { const t=document.getElementById('bodyConfigHabs');t.innerHTML='';habs.sort((a,b)=>{if(a.piso<b.piso)return -1;if(a.piso>b.piso)return 1;return a.num-b.num;});habs.forEach(h=>{t.innerHTML+=`<tr><td class="fw-bold">${h.num}</td><td>${h.piso}</td><td><button class="btn btn-sm btn-outline-danger" onclick="window.funcs.eliminarHabConfig(${h.num})">Trash</button></td></tr>`;}); },
+        agregarHabitacion: () => { if(!funcs.checkPermiso('nav-config'))return;const n=parseInt(document.getElementById('confNum').value),p=document.getElementById('confPiso').value;if(n&&p){if(habs.some(h=>h.num===n))return alert("Ya existe");habs.push({num:n,piso:p});saveToCloud();funcs.renderConfigHabs();} },
+        eliminarHabConfig: (n) => { if(funcs.checkPermiso('nav-config')&&confirm("¿Eliminar?")){habs=habs.filter(h=>h.num!=n);saveToCloud();funcs.renderConfigHabs();} }
+    };
+
+    // Asignar al objeto global window
+    window.funcs = funcs;
+
+    // Arrancar Listener de Firebase
+    initRealtimeListener();
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
