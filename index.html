@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA SUMAJ - v38.0 (STABLE FIX)</title>
+    <title>SISTEMA SUMAJ - v39.0 (LOCAL MODE)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -40,7 +40,6 @@
         .navbar { 
             background: linear-gradient(90deg, #1b262c 0%, #0f4c75 100%); 
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: background 0.5s ease;
         }
         
         .nav-pills .nav-link { 
@@ -120,7 +119,7 @@
         <div class="mb-4">
             <i class="fas fa-hotel fa-3x text-primary mb-3"></i>
             <h3 class="fw-bold text-dark">SUMAJ LODGE</h3>
-            <p class="text-muted small">Sistema de Gestión Hotelera v38.0</p>
+            <p class="text-muted small">Sistema Local - Sin Internet</p>
         </div>
         <div class="form-floating mb-3 text-start">
             <input type="text" class="form-control" id="loginUser" placeholder="Usuario">
@@ -142,7 +141,7 @@
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold" href="#">
                 <i class="fas fa-water me-2"></i>SUMAJ <span class="fw-light">MANAGER</span>
-                <span id="networkStatus" class="badge bg-success ms-2" style="font-size:0.6rem; vertical-align: middle;">ONLINE</span>
+                <span class="badge bg-warning text-dark ms-2" style="font-size:0.6rem; vertical-align: middle;">LOCAL / OFFLINE</span>
             </a>
             <div class="d-flex align-items-center gap-3">
                 <div class="text-end text-white d-none d-md-block">
@@ -358,7 +357,13 @@
             
             <div class="tab-pane fade" id="tab-config">
                  <div class="row g-4">
-                     <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 p-4"><h6 class="fw-bold">Respaldo Local</h6><button class="btn btn-outline-primary w-100" onclick="window.funcs.descargarBackup()">Descargar JSON</button></div></div>
+                     <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
+                            <h6 class="fw-bold">Base de Datos Local</h6>
+                            <button class="btn btn-outline-primary w-100 mb-2" onclick="window.funcs.descargarBackup()">Descargar JSON</button>
+                            <button class="btn btn-outline-danger w-100" onclick="window.funcs.resetSystem()">Borrar Todo</button>
+                        </div>
+                     </div>
                      <div class="col-md-8"><div class="card border-0 shadow-sm rounded-4 p-4"><h6 class="fw-bold">Habitaciones</h6><div class="input-group mb-3"><input id="confNum" class="form-control" placeholder="Num"><input id="confPiso" class="form-control" placeholder="Piso"><button class="btn btn-dark" onclick="window.funcs.agregarHabitacion()">+</button></div><div style="max-height:300px;overflow-y:auto"><table class="table table-sm"><tbody id="bodyConfigHabs"></tbody></table></div></div></div>
                  </div>
             </div>
@@ -381,14 +386,12 @@
                             <div class="col-6"><div class="form-floating"><input type="date" id="checkin" class="form-control bg-white border-0 fw-bold" onchange="window.funcs.cargarHabitacionesDisponibles()"><label>Entrada</label></div></div>
                             <div class="col-6"><div class="form-floating"><input type="date" id="checkout" class="form-control bg-white border-0 fw-bold" onchange="window.funcs.cargarHabitacionesDisponibles()"><label>Salida</label></div></div>
                         </div>
-
                         <div class="row g-2 mb-3">
                             <div class="col-md-4"><div class="form-floating"><input type="text" id="dni" class="form-control bg-light border-0" placeholder="DNI" onkeyup="window.funcs.buscarCliente(this.value)"><label>DNI / DOC</label></div></div>
                             <div class="col-md-8"><div class="form-floating"><input type="text" id="cliente" class="form-control fw-bold border-0" placeholder="Nombre"><label>Nombre Completo</label></div></div>
                             <div class="col-md-6"><div class="form-floating"><input type="text" id="c_celular" class="form-control bg-light border-0" placeholder="Celular"><label>Celular</label></div></div>
                             <div class="col-md-6"><div class="form-floating"><input type="number" id="numPersonas" class="form-control bg-light border-0" value="1"><label>Personas</label></div></div>
                         </div>
-                        
                         <div class="row g-2">
                             <div class="col-6"><div class="form-floating"><select id="habSelect" class="form-select border-primary fw-bold" onchange="window.funcs.checkTipoHab('mapa')"></select><label>Habitación (Libres)</label></div></div>
                             <div class="col-6"><div class="form-floating"><select id="tipoHab" class="form-select bg-light border-0"></select><label>Tipo</label></div></div>
@@ -440,41 +443,11 @@
     </div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-        getFirestore, doc, onSnapshot, setDoc, collection, addDoc, query, where, getDocs, orderBy, limit, 
-        enableIndexedDbPersistence 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // --- CREDENCIALES ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyBL05JC0LZ9IWBA3fzf1MGMZxj2opbumhY",
-        authDomain: "sumaj-system.firebaseapp.com",
-        projectId: "sumaj-system",
-        storageBucket: "sumaj-system.firebasestorage.app",
-        messagingSenderId: "1010435012694",
-        appId: "1:1010435012694:web:fa471c7231a6036c08e3f7"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Persistencia Offline (Mejorada con manejo de errores silencioso)
-    enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code == 'failed-precondition') {
-            console.warn('Persistencia falló: Multiples pestañas abiertas.');
-        } else if (err.code == 'unimplemented') {
-            console.warn('El navegador no soporta persistencia.');
-        }
-    });
-
-    const DOC_ACTIVE = doc(db, "sumaj_data", "hotel_active");
-    const COL_HISTORY = collection(db, "sumaj_data", "hotel_active", "historial_collection"); 
-    const COL_LOGS = collection(db, "sumaj_data", "hotel_active", "logs_collection");
+<script>
+    // --- SISTEMA LOCALSTORAGE SIN FIREBASE ---
+    const STORAGE_KEY = 'SUMAJ_DATA_V1';
 
     // --- VARIABLES DE ESTADO ---
-    // Definición robusta de habitaciones por defecto
     const defaultHabs = [
         {num:101, piso:'Piso 1', tipo:'Matrimonial', active:true}, {num:102, piso:'Piso 1', tipo:'Matrimonial', active:true},
         {num:103, piso:'Piso 1', tipo:'Doble', active:true}, {num:104, piso:'Piso 1', tipo:'Matrimonial', active:true},
@@ -488,10 +461,17 @@
         {num:401, piso:'Zona Muelle', tipo:'Muelle', active:true}
     ];
 
-    let habs = defaultHabs; let ress = []; let inventario = []; let caja = []; 
+    let habs = defaultHabs; 
+    let ress = []; 
+    let inventario = []; 
+    let caja = []; 
     let users = [{ user: 'admin', pass: 'admin707', role: 'admin', modules: ['all'] }]; 
-    let limpieza = {}; let historialCache = []; 
-    let currentUser = null; let modalInstance = null; let modalNuevoIngreso = null; 
+    let limpieza = {}; 
+    let historial = []; // Historial Local
+    let logs = []; // Logs Locales
+    let currentUser = null; 
+    let modalInstance = null; 
+    let modalNuevoIngreso = null; 
     let calDate = new Date(); 
     
     // Fechas Locales
@@ -501,65 +481,58 @@
     const hoy = localDate.toISOString().split('T')[0];
     const { jsPDF } = window.jspdf;
 
-    // --- DETECTOR ONLINE/OFFLINE ---
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    function updateOnlineStatus() {
-        const badge = document.getElementById('networkStatus');
-        const nav = document.querySelector('.navbar');
-        if (navigator.onLine) {
-            badge.className = 'badge bg-success ms-2'; badge.innerText = 'ONLINE';
-            if(nav) nav.style.background = 'linear-gradient(90deg, #1b262c 0%, #0f4c75 100%)';
-        } else {
-            badge.className = 'badge bg-danger ms-2'; badge.innerText = 'OFFLINE';
-            if(nav) nav.style.background = 'linear-gradient(90deg, #5c2525 0%, #3e1212 100%)';
+    // --- CARGA Y GUARDADO LOCAL ---
+    function loadFromStorage() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            try {
+                const d = JSON.parse(raw);
+                habs = d.habs || defaultHabs;
+                // Forzar IDs a string
+                ress = (d.ress || []).map(r => ({...r, id: String(r.id)}));
+                inventario = d.inventario || [];
+                caja = d.caja || [];
+                users = d.users || users;
+                limpieza = d.limpieza || {};
+                historial = (d.historial || []).map(h => ({...h, id: String(h.id)}));
+                logs = d.logs || [];
+                console.log("Datos locales cargados correctamente.");
+            } catch (e) {
+                console.error("Error al cargar datos locales:", e);
+                Swal.fire('Error', 'Datos corruptos, se iniciará por defecto', 'error');
+            }
+        }
+        
+        // Auto Login si hay sesión
+        const sessionUser = localStorage.getItem('sumaj_session_local');
+        if (sessionUser) {
+            const found = users.find(u => u.user === sessionUser);
+            if (found) {
+                currentUser = found;
+                initInterface();
+            }
         }
     }
 
-    async function saveActiveData() {
-        try { 
-            // Validar datos antes de guardar para evitar corrupciones
-            const safeRess = ress.map(r => ({...r, id: String(r.id)})); // Forzar IDs a string
-            await setDoc(DOC_ACTIVE, { habs, ress: safeRess, inventario, caja, users, limpieza, lastUpdate: new Date().toISOString() }); 
-        } catch (e) { 
-            console.error("Error guardando:", e); 
-            Swal.fire({toast:true, position:'bottom-end', icon:'error', title:'Error de Sincronización', timer:3000});
+    function saveData() {
+        const data = {
+            habs, ress, inventario, caja, users, limpieza, historial, logs,
+            lastUpdate: new Date().toISOString()
+        };
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.error("Error al guardar:", e);
+            Swal.fire('Error de Almacenamiento', 'Memoria llena o error de disco', 'error');
         }
     }
 
-    function initRealtimeListener() {
-        onSnapshot(DOC_ACTIVE, (docSnap) => {
-            if (docSnap.exists()) {
-                const d = docSnap.data();
-                habs = d.habs && d.habs.length > 5 ? d.habs : defaultHabs; 
-                // Asegurar compatibilidad de IDs
-                ress = (d.ress || []).map(r => ({...r, id: String(r.id)})); 
-                inventario = d.inventario || []; caja = d.caja || []; users = d.users || users; limpieza = d.limpieza || {};
-                
-                habs.forEach(h => { if(h.active === undefined) h.active = true; });
-
-                if (!currentUser) {
-                    const sessionUser = localStorage.getItem('sumaj_session');
-                    if (sessionUser) {
-                        const found = users.find(u => u.user === sessionUser);
-                        if (found) {
-                            currentUser = found;
-                            document.getElementById('loginOverlay').style.display = 'none';
-                            document.getElementById('appInterface').style.display = 'block';
-                            document.getElementById('userDisplay').innerHTML = `<span class="fw-light">Hola,</span> ${currentUser.user.toUpperCase()}`;
-                            funcs.aplicarPermisos(); funcs.initSystem();
-                        }
-                    }
-                }
-                if(currentUser) { 
-                    funcs.actualizarPantalla(); funcs.renderCal(); funcs.renderLimpieza(); 
-                    if(document.getElementById('tab-caja').classList.contains('active')) funcs.renderCaja(); 
-                    funcs.populateLogUsers(); 
-                }
-            } else { saveActiveData(); }
-        }, (error) => {
-            console.error("Error Listener:", error);
-        });
+    function initInterface() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('appInterface').style.display = 'block';
+        document.getElementById('userDisplay').innerHTML = `<span class="fw-light">Hola,</span> ${currentUser.user.toUpperCase()}`;
+        funcs.aplicarPermisos();
+        funcs.initSystem();
     }
 
     const funcs = {
@@ -567,14 +540,12 @@
             const u = document.getElementById('loginUser').value; const p = document.getElementById('loginPass').value;
             const userFound = users.find(x => x.user === u && x.pass === p);
             if (userFound) {
-                currentUser = userFound; localStorage.setItem('sumaj_session', userFound.user);
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('appInterface').style.display = 'block';
-                document.getElementById('userDisplay').innerHTML = `<span class="fw-light">Hola,</span> ${currentUser.user.toUpperCase()}`;
-                funcs.aplicarPermisos(); funcs.registrarLog("LOGIN", "Ingreso al sistema"); funcs.initSystem();
+                currentUser = userFound; localStorage.setItem('sumaj_session_local', userFound.user);
+                initInterface();
+                funcs.registrarLog("LOGIN", "Ingreso al sistema");
             } else { Swal.fire({icon: 'error', title: 'Credenciales Incorrectas', showConfirmButton: false, timer: 1500}); }
         },
-        logout: () => { localStorage.removeItem('sumaj_session'); location.reload(); },
+        logout: () => { localStorage.removeItem('sumaj_session_local'); location.reload(); },
         
         aplicarPermisos: () => {
             document.querySelectorAll('.nav-item').forEach(el => el.style.display = 'none');
@@ -594,7 +565,6 @@
             if(funcs.checkPermiso('nav-caja')) funcs.renderCaja(); if(funcs.checkPermiso('nav-inventario')) funcs.renderInventario();
             if(funcs.checkPermiso('nav-usuarios')) funcs.renderUsuarios(); 
             funcs.renderLimpieza(); funcs.populateLogUsers();
-            updateOnlineStatus();
             setInterval(()=>document.getElementById('reloj').innerText=new Date().toLocaleString(),1000);
         },
 
@@ -632,7 +602,7 @@
                     else if (stL === 'mantenimiento') { statusClass = 'b-mantenimiento'; chip = '<span class="badge bg-secondary">Mant.</span>'; mainInfo = '<div class="text-muted">Mantenimiento</div>'; }
 
                     const dN = h.num > 400 ? 'Muelle' : (h.num > 300 ? 'Dept' : h.num);
-                    const safeId = r ? `'${r.id}'` : null; // Importante: Comillas para el string en HTML
+                    const safeId = r ? `'${r.id}'` : null; // IDs seguros
                     
                     contentHTML += `
                     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12">
@@ -670,7 +640,8 @@
             let r;
             if (id) {
                 const searchId = String(id);
-                r = isH ? historialCache.find(x => String(x.id) === searchId) : ress.find(x => String(x.id) === searchId);
+                // Buscar en activos o en historial
+                r = isH ? historial.find(x => String(x.id) === searchId) : ress.find(x => String(x.id) === searchId);
             } else {
                 const f = document.getElementById('filtroFecha').value;
                 r = ress.find(x => x.habNum == num && (f >= x.in && f <= x.out));
@@ -701,7 +672,7 @@
             const granT = isH ? r.totalFinal : (r.total + tCons);
             const deu = isH ? 0 : (granT - r.adelanto);
             const hBtn = isH ? 'display:none' : '';
-            const safeId = `'${r.id}'`; // Importante: Comillas para onclick
+            const safeId = `'${r.id}'`; // Comillas para onclick
 
             let ops = '<option value="">+ Agregar Item</option>';
             inventario.forEach(p => ops += `<option value="${p.id}">${p.nombre} - S/${p.precio}</option>`);
@@ -751,7 +722,7 @@
             modalInstance.show();
         },
 
-        setEstadoLimpieza: (num, estado) => { limpieza[num] = estado; saveActiveData(); funcs.registrarLog("LIMPIEZA", `Hab ${num} a ${estado}`); },
+        setEstadoLimpieza: (num, estado) => { limpieza[num] = estado; saveData(); funcs.registrarLog("LIMPIEZA", `Hab ${num} a ${estado}`); funcs.renderLimpieza(); funcs.actualizarPantalla(); if(modalInstance) modalInstance.hide(); },
         
         abrirModalNuevaReserva: (habPreseleccionada = null) => {
             if(!modalNuevoIngreso) modalNuevoIngreso = new bootstrap.Modal(document.getElementById('modalNuevoIngreso'));
@@ -794,28 +765,42 @@
 
         cerrarYReservar: (num) => { if(modalInstance) modalInstance.hide(); setTimeout(() => { funcs.abrirModalNuevaReserva(num); }, 200); },
         
-        buscarCliente: async (dni) => { if (dni.length < 8) return; let previo = ress.find(x => x.dni === dni); if (previo) { const elCliente = document.getElementById('cliente'); elCliente.value = previo.cliente; document.getElementById('c_celular').value = previo.celular || ''; } },
+        buscarCliente: async (dni) => { 
+            if (dni.length < 8) return; 
+            // Busqueda local en historial y reservas activas
+            let previo = ress.find(x => x.dni === dni) || historial.find(x => x.dni === dni); 
+            if (previo) { 
+                document.getElementById('cliente').value = previo.cliente; 
+                document.getElementById('c_celular').value = previo.celular || ''; 
+            } 
+        },
         
-        guardarReserva: async () => { 
+        guardarReserva: () => { 
             const d=(id)=>document.getElementById(id).value; const t=parseFloat(d('total'))||0; let ad=d('pagoEstado')==='Pagado'?t:(d('pagoEstado')==='Adelanto'?parseFloat(d('adelanto')):0); 
             if(!d('cliente')) return Swal.fire('Faltan Datos', 'Ingrese el nombre del cliente', 'warning'); 
             const selHab = parseInt(d('habSelect')); let tipo = d('tipoHab');
             if(document.getElementById('tipoHab').disabled) { const hObj = habs.find(h=>h.num === selHab); if(hObj) tipo = hObj.tipo; }
-            if(limpieza[selHab]==='sucia'||limpieza[selHab]==='limpieza'){ const result = await Swal.fire({title: 'Habitación No Lista', text: '¿Asignar igual?', icon: 'warning', showCancelButton: true}); if(!result.isConfirmed) return; } 
+            if(limpieza[selHab]==='sucia'||limpieza[selHab]==='limpieza'){ 
+                // En modo offline, confirmacion simple
+                if(!confirm('Habitación No Lista. ¿Asignar igual?')) return;
+            } 
             if(!funcs.validarDisponibilidad(selHab,d('checkin'),d('checkout'))) return Swal.fire('Ocupado', 'Fechas ocupadas', 'error'); 
-            // Generar ID como String para evitar problemas
+            
+            // ID UNICO BASE TIEMPO STRING
             const newId = String(Date.now());
             ress.push({id:newId, cliente:d('cliente'),dni:d('dni'),personas:d('numPersonas'),celular:d('c_celular'),habNum:selHab,tipo:tipo,in:d('checkin'),out:d('checkout'),total:t,adelanto:ad,medioPago:d('medioPago'),consumos:[]}); 
-            saveActiveData(); funcs.registrarLog("RESERVA",`Hab ${d('habSelect')} - ${d('cliente')}`); 
+            saveData(); 
+            funcs.registrarLog("RESERVA",`Hab ${d('habSelect')} - ${d('cliente')}`); 
             if(modalNuevoIngreso) modalNuevoIngreso.hide(); 
+            funcs.actualizarPantalla();
             Swal.fire({icon: 'success', title: 'Reserva Creada', timer: 1500, showConfirmButton: false, toast:true, position:'top-end'});
         },
         
         validarDisponibilidad: (h, i, o, excludeId = null) => { return !ress.some(r => { if(excludeId && r.id === excludeId) return false; return r.habNum == h && i < r.out && o > r.in; }); },
         
-        // --- CHECKOUT CORREGIDO Y ROBUSTO ---
-        checkOut: async (id, d) => {
-            // Forzar cierre de modales UI primero
+        // --- CHECKOUT LOCAL ---
+        checkOut: (id, d) => {
+            // Cierre inmediato UI
             funcs.cerrarModalForce();
 
             const deuda = parseFloat(d);
@@ -823,54 +808,38 @@
 
             if (deuda > 0.1) return Swal.fire('Deuda Pendiente', 'Debe cancelar la deuda antes de realizar el Check-Out.', 'warning');
 
-            const result = await Swal.fire({
+            Swal.fire({
                 title: '¿Confirmar Salida?', text: "La habitación pasará a estado SUCIA.", icon: 'warning',
                 showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sí, finalizar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const index = ress.findIndex(x => String(x.id) === searchId);
+                    if (index === -1) return Swal.fire('Error', 'Reserva no encontrada', 'error');
+
+                    const r = ress[index];
+                    const tC = (r.consumos || []).reduce((a, b) => a + (b.precio * b.cantidad), 0);
+                    
+                    const finalRes = { 
+                        ...r, 
+                        totalFinal: r.total + tC, 
+                        fechaCierre: new Date().toISOString(), 
+                        closedBy: currentUser ? currentUser.user : 'system' 
+                    };
+
+                    // Mover a Historial
+                    historial.push(finalRes);
+                    ress.splice(index, 1);
+                    limpieza[r.habNum] = 'sucia';
+                    
+                    // Guardar y Actualizar
+                    saveData();
+                    funcs.registrarLog("CHECK_OUT", `Hab ${r.habNum} - Salida Cliente`);
+                    funcs.actualizarPantalla();
+                    funcs.renderLimpieza();
+
+                    Swal.fire({ icon: 'success', title: 'Check-Out Exitoso', timer: 1500, showConfirmButton: false });
+                }
             });
-
-            if (!result.isConfirmed) return;
-
-            const index = ress.findIndex(x => String(x.id) === searchId);
-            if (index === -1) return Swal.fire('Error', 'Reserva no encontrada (Intente recargar)', 'error');
-
-            const r = ress[index];
-            const tC = (r.consumos || []).reduce((a, b) => a + (b.precio * b.cantidad), 0);
-            
-            // Objeto final para historial
-            const finalRes = { 
-                ...r, 
-                totalFinal: r.total + tC, 
-                fechaCierre: new Date().toISOString(), 
-                closedBy: currentUser ? currentUser.user : 'system' 
-            };
-
-            Swal.fire({title: 'Procesando...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
-
-            try {
-                // 1. Guardar en Colección Historial
-                await addDoc(COL_HISTORY, finalRes);
-
-                // 2. Actualizar estado local
-                ress.splice(index, 1);
-                limpieza[r.habNum] = 'sucia';
-
-                // 3. Guardar estado activo principal
-                await saveActiveData();
-                
-                funcs.registrarLog("CHECK_OUT", `Hab ${r.habNum} - Salida Cliente`);
-                
-                // Forzar repintado inmediato
-                funcs.actualizarPantalla();
-                funcs.renderLimpieza();
-
-                Swal.fire({ icon: 'success', title: 'Check-Out Exitoso', timer: 1500, showConfirmButton: false });
-
-            } catch (e) {
-                console.error("Error CheckOut:", e);
-                Swal.fire('Error en el proceso', 'Verifique su conexión a internet: ' + e.message, 'error');
-                // Intentar recargar datos por si hubo desincronización
-                funcs.initSystem();
-            }
         },
         
         cerrarModalForce: () => {
@@ -889,9 +858,9 @@
         },
 
         // --- CAJA & OTROS ---
-        guardarMovimientoCaja: () => { const t=document.getElementById('cajaTipo').value,d=document.getElementById('cajaDesc').value,m=parseFloat(document.getElementById('cajaMonto').value);if(!d||!m)return;caja.push({id:Date.now(),fecha:new Date().toLocaleString(),tipo:t,cat:document.getElementById('cajaCat').value,desc:d,monto:m});saveActiveData();funcs.renderCaja();document.getElementById('cajaDesc').value='';document.getElementById('cajaMonto').value='';Swal.fire({icon:'success',title:'Registrado',toast:true,position:'bottom-end',timer:1500}); },
+        guardarMovimientoCaja: () => { const t=document.getElementById('cajaTipo').value,d=document.getElementById('cajaDesc').value,m=parseFloat(document.getElementById('cajaMonto').value);if(!d||!m)return;caja.push({id:Date.now(),fecha:new Date().toLocaleString(),tipo:t,cat:document.getElementById('cajaCat').value,desc:d,monto:m});saveData();funcs.renderCaja();document.getElementById('cajaDesc').value='';document.getElementById('cajaMonto').value='';Swal.fire({icon:'success',title:'Registrado',toast:true,position:'bottom-end',timer:1500}); },
         renderCaja: () => { const t=document.getElementById('bodyCaja');t.innerHTML='';let s=0;[...caja].reverse().forEach(m=>{if(m.tipo==='ingreso')s+=m.monto;else s-=m.monto;t.innerHTML+=`<tr><td class="ps-4">${m.fecha.split(',')[0]}</td><td><span class="badge ${m.tipo==='ingreso'?'bg-success':'bg-danger'}">${m.tipo.toUpperCase()}</span></td><td>${m.cat}</td><td>${m.desc}</td><td class="fw-bold">S/ ${m.monto.toFixed(2)}</td><td><button class="btn btn-sm text-danger" onclick="window.funcs.delCaja(${m.id})"><i class="fas fa-trash"></i></button></td></tr>`;});document.getElementById('cajaSaldo').innerText=`S/ ${s.toFixed(2)}`; },
-        delCaja: async (id) => { if(funcs.verificarPermisoAdmin()){const r=await Swal.fire({title:'¿Borrar?',icon:'warning',showCancelButton:true}); if(r.isConfirmed){caja=caja.filter(x=>x.id!==id);saveActiveData();funcs.renderCaja();}} },
+        delCaja: (id) => { if(funcs.verificarPermisoAdmin()){if(confirm('¿Borrar movimiento?')){caja=caja.filter(x=>x.id!==id);saveData();funcs.renderCaja();}} },
         
         // --- EXPORTAR & HELPERS ---
         exportarCalImg: () => { html2canvas(document.getElementById('calContainer')).then(canvas => { const link=document.createElement('a'); link.download=`Calendario_${hoy}.png`; link.href=canvas.toDataURL(); link.click(); }); },
@@ -925,9 +894,9 @@
         },
         
         // --- RESTO ---
-        agregarProducto: () => { const t=document.getElementById('invTipo').value,n=document.getElementById('invNombre').value,p=parseFloat(document.getElementById('invPrecio').value),s=t==='servicio'?999:parseInt(document.getElementById('invStock').value);if(!n)return;inventario.push({id:Date.now(),nombre:n,precio:p,stock:s,tipo:t});saveActiveData();funcs.renderInventario();document.getElementById('invNombre').value=''; },
+        agregarProducto: () => { const t=document.getElementById('invTipo').value,n=document.getElementById('invNombre').value,p=parseFloat(document.getElementById('invPrecio').value),s=t==='servicio'?999:parseInt(document.getElementById('invStock').value);if(!n)return;inventario.push({id:Date.now(),nombre:n,precio:p,stock:s,tipo:t});saveData();funcs.renderInventario();document.getElementById('invNombre').value=''; },
         renderInventario: () => { const t=document.getElementById('tablaInventario');t.innerHTML='';inventario.forEach(p=>{t.innerHTML+=`<tr><td class="ps-4 fw-bold text-primary">${p.nombre}</td><td>${p.tipo}</td><td>S/ ${p.precio}</td><td>${p.tipo==='servicio'?'∞':p.stock}</td><td><button class="btn btn-sm btn-light text-danger" onclick="window.funcs.delInv(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`;}); },
-        delInv: async (id) => { if(funcs.verificarPermisoAdmin()){inventario=inventario.filter(x=>x.id!==id);saveActiveData();funcs.renderInventario();} },
+        delInv: (id) => { if(funcs.verificarPermisoAdmin()){inventario=inventario.filter(x=>x.id!==id);saveData();funcs.renderInventario();} },
         actualizarOperaciones: () => { const f=document.getElementById('fechaOp').value,i=document.getElementById('listIn'),o=document.getElementById('listOut');i.innerHTML='';o.innerHTML='';ress.forEach(r=>{let h=`<div class="op-card ${r.in===f?'op-in':'op-out'}"><div><span class="badge bg-dark me-2">${r.habNum}</span><span class="fw-bold">${r.cliente}</span></div></div>`;if(r.in===f)i.innerHTML+=h;if(r.out===f)o.innerHTML+=h;}); },
         renderLimpieza: () => { 
             const ls=document.getElementById('listSucias'), ll=document.getElementById('listLimpias'); ls.innerHTML=''; ll.innerHTML='';
@@ -945,29 +914,50 @@
         toggleStockInput: () => { document.getElementById('divStockInput').style.display=document.getElementById('invTipo').value==='servicio'?'none':'block'; },
         
         populateLogUsers: () => { const sel = document.getElementById('filterLogUser'); sel.innerHTML = '<option value="">Todos</option>'; users.forEach(u => sel.innerHTML += `<option value="${u.user}">${u.user}</option>`); },
-        registrarLog: async (accion, detalle) => { try { await addDoc(COL_LOGS, { dateIso: new Date().toISOString(), dateStr: new Date().toLocaleString(), user: currentUser ? currentUser.user : 'system', action: accion, details: detalle }); } catch(e) {} },
-        renderLogs: async () => { const t=document.getElementById('tablaLogs'); t.innerHTML='<tr><td colspan="4" class="text-center">Cargando...</td></tr>'; const q = query(COL_LOGS, orderBy("dateIso", "desc"), limit(50)); const qs = await getDocs(q); t.innerHTML = ''; qs.forEach((doc) => { const l=doc.data(); t.innerHTML += `<tr><td>${l.dateStr}</td><td>${l.user}</td><td>${l.action}</td><td>${l.details}</td></tr>`; }); },
+        registrarLog: (accion, detalle) => { 
+            logs.unshift({ dateIso: new Date().toISOString(), dateStr: new Date().toLocaleString(), user: currentUser ? currentUser.user : 'system', action: accion, details: detalle }); 
+            if(logs.length > 200) logs.pop(); // Limitar logs
+            saveData();
+        },
+        renderLogs: () => { const t=document.getElementById('tablaLogs'); t.innerHTML=''; logs.forEach(l => { t.innerHTML += `<tr><td>${l.dateStr}</td><td>${l.user}</td><td>${l.action}</td><td>${l.details}</td></tr>`; }); },
         renderConfigHabs: () => { const t=document.getElementById('bodyConfigHabs');t.innerHTML=''; habs.sort((a,b)=>a.num-b.num).forEach(h=>{t.innerHTML+=`<tr><td>${h.num}</td><td>${h.piso}</td><td>${h.active!==false?'<span class="badge bg-success">Activa</span>':'<span class="badge bg-secondary">Inactiva</span>'}</td><td><button class="btn btn-sm btn-outline-dark" onclick="window.funcs.toggleHabEstado(${h.num})">Switch</button></td></tr>`;}); },
-        agregarHabitacion: () => { const n=parseInt(document.getElementById('confNum').value),p=document.getElementById('confPiso').value;if(n&&p){habs.push({num:n,piso:p,active:true});saveActiveData();funcs.renderConfigHabs();} },
-        toggleHabEstado: (n) => { const h = habs.find(x => x.num === n); if(h) { h.active = !h.active; saveActiveData(); funcs.renderConfigHabs(); } },
+        agregarHabitacion: () => { const n=parseInt(document.getElementById('confNum').value),p=document.getElementById('confPiso').value;if(n&&p){habs.push({num:n,piso:p,active:true});saveData();funcs.renderConfigHabs();} },
+        toggleHabEstado: (n) => { const h = habs.find(x => x.num === n); if(h) { h.active = !h.active; saveData(); funcs.renderConfigHabs(); } },
         checkPermiso: (modId) => { if(currentUser.modules.includes('all')) return true; return currentUser.modules.includes(modId); },
         verificarPermisoAdmin: () => { if (currentUser.modules.includes('all')) return true; Swal.fire('Acceso Denegado', 'Permisos insuficientes', 'error'); return false; },
-        addCons: (id) => { const pid = parseInt(document.getElementById('selP').value); const q = parseInt(document.getElementById('selQ').value); const p = inventario.find(i => i.id === pid); if(!p) return; if(p.tipo === 'producto') { if(p.stock < q) return Swal.fire('Sin Stock', `Quedan ${p.stock}`, 'error'); p.stock -= q; } const r = ress.find(x => String(x.id) == String(id)); if(!r.consumos) r.consumos = []; r.consumos.push({ idProd: p.id, item: p.nombre, precio: p.precio, cantidad: q, tipo: p.tipo }); saveActiveData(); funcs.verDetalle(r.habNum, id); },
-        delCons: (id, i) => { const r = ress.find(x => String(x.id) == String(id)); const it = r.consumos[i]; if(it.idProd && it.tipo === 'producto') { const p = inventario.find(x => x.id === it.idProd); if(p) { p.stock += it.cantidad; } } r.consumos.splice(i, 1); saveActiveData(); funcs.verDetalle(r.habNum, id); },
-        pay: async (id,m) => { const result = await Swal.fire({title: 'Cobrar Saldo', text: `¿Cobrar S/ ${m.toFixed(2)}?`, icon: 'info', showCancelButton: true}); if(result.isConfirmed){const r=ress.find(x=>String(x.id)==String(id));r.adelanto+=m;saveActiveData();funcs.verDetalle(r.habNum,id);funcs.renderCal();} },
-        printTicket: (id, isH) => { const r = isH ? historialCache.find(x => String(x.id) == String(id)) : ress.find(x => String(x.id) == String(id)); const ventana = window.open('', 'PRINT', 'height=600,width=400'); ventana.document.write(`<html><body style="font-family:monospace;width:80mm;font-size:12px;text-align:center;"><h3>SUMAJ LODGE</h3><p>RUC: 20XXXXXXXXX<br>Sauce - San Martín</p><hr>HAB: ${r.habNum}<br>Cliente: ${r.cliente}<br>Total: S/${r.total}<hr><p>¡Gracias por su visita!</p></body></html>`); ventana.document.close(); ventana.focus(); setTimeout(() => { ventana.print(); ventana.close(); }, 500); },
+        addCons: (id) => { const pid = parseInt(document.getElementById('selP').value); const q = parseInt(document.getElementById('selQ').value); const p = inventario.find(i => i.id === pid); if(!p) return; if(p.tipo === 'producto') { if(p.stock < q) return Swal.fire('Sin Stock', `Quedan ${p.stock}`, 'error'); p.stock -= q; } const r = ress.find(x => String(x.id) == String(id)); if(!r.consumos) r.consumos = []; r.consumos.push({ idProd: p.id, item: p.nombre, precio: p.precio, cantidad: q, tipo: p.tipo }); saveData(); funcs.verDetalle(r.habNum, id); },
+        delCons: (id, i) => { const r = ress.find(x => String(x.id) == String(id)); const it = r.consumos[i]; if(it.idProd && it.tipo === 'producto') { const p = inventario.find(x => x.id === it.idProd); if(p) { p.stock += it.cantidad; } } r.consumos.splice(i, 1); saveData(); funcs.verDetalle(r.habNum, id); },
+        pay: (id,m) => { if(confirm(`¿Cobrar S/ ${m.toFixed(2)}?`)){const r=ress.find(x=>String(x.id)==String(id));r.adelanto+=m;saveData();funcs.verDetalle(r.habNum,id);funcs.renderCal();} },
+        printTicket: (id, isH) => { const r = isH ? historial.find(x => String(x.id) == String(id)) : ress.find(x => String(x.id) == String(id)); const ventana = window.open('', 'PRINT', 'height=600,width=400'); ventana.document.write(`<html><body style="font-family:monospace;width:80mm;font-size:12px;text-align:center;"><h3>SUMAJ LODGE</h3><p>RUC: 20XXXXXXXXX<br>Sauce - San Martín</p><hr>HAB: ${r.habNum}<br>Cliente: ${r.cliente}<br>Total: S/${r.total}<hr><p>¡Gracias por su visita!</p></body></html>`); ventana.document.close(); ventana.focus(); setTimeout(() => { ventana.print(); ventana.close(); }, 500); },
         enviarWhatsapp: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r || !r.celular) return Swal.fire('Error', 'No hay celular registrado', 'warning'); let phone = r.celular.replace(/\D/g, ''); if(phone.length === 9) phone = '51' + phone; const texto = `Hola ${r.cliente}, gracias por visitar Sumaj Lagoon Lodge. Su cuenta total fue de S/ ${r.total.toFixed(2)}. ¡Esperamos verlo pronto!`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`, '_blank'); },
         editarReserva: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r) return; const htmlForm = `<div class="p-4"><h5 class="fw-bold text-primary mb-3">Editar Reserva</h5><input id="edit_cliente" class="form-control mb-2" value="${r.cliente}"><input id="edit_dni" class="form-control mb-2" value="${r.dni||''}"><div class="row g-2 mb-2"><div class="col-6"><input type="date" id="edit_in" class="form-control" value="${r.in}"></div><div class="col-6"><input type="date" id="edit_out" class="form-control" value="${r.out}"></div></div><input type="number" id="edit_total" class="form-control mb-3" value="${r.total}"><button class="btn btn-primary w-100" onclick="window.funcs.guardarEdicion('${r.id}')">Guardar Cambios</button><button class="btn btn-link w-100 mt-2" onclick="window.funcs.verDetalle(${r.habNum}, '${r.id}')">Cancelar</button></div>`; document.getElementById('mb').innerHTML = htmlForm; },
-        guardarEdicion: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r) return; r.cliente=document.getElementById('edit_cliente').value; r.dni=document.getElementById('edit_dni').value; r.in=document.getElementById('edit_in').value; r.out=document.getElementById('edit_out').value; r.total=parseFloat(document.getElementById('edit_total').value); saveActiveData(); funcs.registrarLog("EDITAR", `Reserva ${r.id} modif`); funcs.verDetalle(r.habNum, r.id); },
-        guardarUsuario: () => { if(!funcs.verificarPermisoAdmin()) return; const u = document.getElementById('newUserName').value; const p = document.getElementById('newUserPass').value; const idx = parseInt(document.getElementById('editUserIndex').value); if(!u || !p) return Swal.fire('Error', 'Falta datos', 'warning'); const mods = Array.from(document.querySelectorAll('.perm-check:checked')).map(c=>c.value); if(idx === -1) users.push({user:u, pass:p, modules:mods}); else { users[idx].user=u; users[idx].pass=p; users[idx].modules=mods; } saveActiveData(); funcs.renderUsuarios(); funcs.limpiarFormUsuario(); },
+        guardarEdicion: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r) return; r.cliente=document.getElementById('edit_cliente').value; r.dni=document.getElementById('edit_dni').value; r.in=document.getElementById('edit_in').value; r.out=document.getElementById('edit_out').value; r.total=parseFloat(document.getElementById('edit_total').value); saveData(); funcs.registrarLog("EDITAR", `Reserva ${r.id} modif`); funcs.verDetalle(r.habNum, r.id); funcs.actualizarPantalla();},
+        guardarUsuario: () => { if(!funcs.verificarPermisoAdmin()) return; const u = document.getElementById('newUserName').value; const p = document.getElementById('newUserPass').value; const idx = parseInt(document.getElementById('editUserIndex').value); if(!u || !p) return Swal.fire('Error', 'Falta datos', 'warning'); const mods = Array.from(document.querySelectorAll('.perm-check:checked')).map(c=>c.value); if(idx === -1) users.push({user:u, pass:p, modules:mods}); else { users[idx].user=u; users[idx].pass=p; users[idx].modules=mods; } saveData(); funcs.renderUsuarios(); funcs.limpiarFormUsuario(); },
         renderUsuarios: () => { const t=document.getElementById('tablaUsuarios'); t.innerHTML=''; users.forEach((u,i)=>{ t.innerHTML+=`<tr><td class="ps-4 fw-bold">${u.user}</td><td>${u.modules.includes('all')?'ADMIN':u.modules.length+' Módulos'}</td><td><button class="btn btn-sm btn-info text-white me-1" onclick="window.funcs.editUser(${i})"><i class="fas fa-pen"></i></button>${u.user!=='admin'?`<button class="btn btn-sm btn-danger" onclick="window.funcs.delUser('${u.user}')"><i class="fas fa-trash"></i></button>`:''}</td></tr>`; }); },
         editUser: (i) => { const u=users[i]; document.getElementById('editUserIndex').value=i; document.getElementById('newUserName').value=u.user; document.getElementById('newUserPass').value=u.pass; document.querySelectorAll('.perm-check').forEach(c => c.checked = u.modules.includes('all') || u.modules.includes(c.value)); },
-        delUser: async (u) => { if(funcs.verificarPermisoAdmin()){const r=await Swal.fire({title:'¿Eliminar?',icon:'warning',showCancelButton:true}); if(r.isConfirmed){users=users.filter(x=>x.user!==u);saveActiveData();funcs.renderUsuarios();}} },
-        limpiarFormUsuario: () => { document.getElementById('newUserName').value=''; document.getElementById('newUserPass').value=''; document.getElementById('editUserIndex').value='-1'; document.querySelectorAll('.perm-check').forEach(c=>c.checked=false); }
+        delUser: (u) => { if(funcs.verificarPermisoAdmin()){if(confirm('¿Eliminar usuario?')){users=users.filter(x=>x.user!==u);saveData();funcs.renderUsuarios();}} },
+        limpiarFormUsuario: () => { document.getElementById('newUserName').value=''; document.getElementById('newUserPass').value=''; document.getElementById('editUserIndex').value='-1'; document.querySelectorAll('.perm-check').forEach(c=>c.checked=false); },
+        
+        // BACKUP Y RESET
+        descargarBackup: () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage.getItem(STORAGE_KEY)));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href",     dataStr);
+            downloadAnchorNode.setAttribute("download", "backup_sumaj_" + new Date().toISOString().slice(0,10) + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        },
+        resetSystem: () => {
+            if(confirm('¡PELIGRO! Esto borrará TODA la información local. ¿Estás seguro?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
     };
 
     window.funcs = funcs;
-    initRealtimeListener();
+    loadFromStorage();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
