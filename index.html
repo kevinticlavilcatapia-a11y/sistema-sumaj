@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA SUMAJ - v37.0 (ROOT FIX)</title>
+    <title>SISTEMA SUMAJ - v38.0 (STABLE FIX)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
             
             --disponible: #28a745; 
             --ocupado: #dc3545;       
-            --salida: #fd7e14;       
+            --salida: #fd7e14;        
             --sucia: #ffc107; 
             --limpieza: #17a2b8; 
             --mantenimiento: #6f42c1;
@@ -120,7 +120,7 @@
         <div class="mb-4">
             <i class="fas fa-hotel fa-3x text-primary mb-3"></i>
             <h3 class="fw-bold text-dark">SUMAJ LODGE</h3>
-            <p class="text-muted small">Sistema de Gestión Hotelera v37.0</p>
+            <p class="text-muted small">Sistema de Gestión Hotelera v38.0</p>
         </div>
         <div class="form-floating mb-3 text-start">
             <input type="text" class="form-control" id="loginUser" placeholder="Usuario">
@@ -447,62 +447,44 @@
         enableIndexedDbPersistence 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // --- CREDENCIALES (REEMPLAZA ESTO) ---
+    // --- CREDENCIALES ---
     const firebaseConfig = {
-  apiKey: "AIzaSyBL05JC0LZ9IWBA3fzf1MGMZxj2opbumhY",
-  authDomain: "sumaj-system.firebaseapp.com",
-  projectId: "sumaj-system",
-  storageBucket: "sumaj-system.firebasestorage.app",
-  messagingSenderId: "1010435012694",
-  appId: "1:1010435012694:web:fa471c7231a6036c08e3f7"
-};
+        apiKey: "AIzaSyBL05JC0LZ9IWBA3fzf1MGMZxj2opbumhY",
+        authDomain: "sumaj-system.firebaseapp.com",
+        projectId: "sumaj-system",
+        storageBucket: "sumaj-system.firebasestorage.app",
+        messagingSenderId: "1010435012694",
+        appId: "1:1010435012694:web:fa471c7231a6036c08e3f7"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    enableIndexedDbPersistence(db)
-        .then(() => { console.log("Persistencia Offline Activada."); })
-        .catch((err) => { console.log("Error Persistencia:", err.code); });
+    // Persistencia Offline (Mejorada con manejo de errores silencioso)
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn('Persistencia falló: Multiples pestañas abiertas.');
+        } else if (err.code == 'unimplemented') {
+            console.warn('El navegador no soporta persistencia.');
+        }
+    });
 
     const DOC_ACTIVE = doc(db, "sumaj_data", "hotel_active");
     const COL_HISTORY = collection(db, "sumaj_data", "hotel_active", "historial_collection"); 
     const COL_LOGS = collection(db, "sumaj_data", "hotel_active", "logs_collection");
 
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    function updateOnlineStatus() {
-        const badge = document.getElementById('networkStatus');
-        const nav = document.querySelector('.navbar');
-        if (navigator.onLine) {
-            badge.className = 'badge bg-success ms-2'; badge.innerText = 'ONLINE';
-            nav.style.background = 'linear-gradient(90deg, #1b262c 0%, #0f4c75 100%)';
-            Swal.fire({toast:true, position:'top-end', icon:'success', title:'Conexión Restaurada', timer:2000, showConfirmButton:false});
-        } else {
-            badge.className = 'badge bg-danger ms-2'; badge.innerText = 'OFFLINE';
-            nav.style.background = 'linear-gradient(90deg, #5c2525 0%, #3e1212 100%)';
-            Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Conexión (Modo Offline)', timer:3000, showConfirmButton:false});
-        }
-    }
-
+    // --- VARIABLES DE ESTADO ---
+    // Definición robusta de habitaciones por defecto
     const defaultHabs = [
-        {num:101, piso:'Piso 1', tipo:'Matrimonial', active:true},
-        {num:102, piso:'Piso 1', tipo:'Matrimonial', active:true},
-        {num:103, piso:'Piso 1', tipo:'Doble', active:true},
-        {num:104, piso:'Piso 1', tipo:'Matrimonial', active:true},
-        {num:105, piso:'Piso 1', tipo:'Triple', active:true},
-        {num:106, piso:'Piso 1', tipo:'Matrimonial', active:true},
-        {num:107, piso:'Piso 1', tipo:'Doble', active:true},
-        {num:108, piso:'Piso 1', tipo:'Familiar', active:true},
-        {num:201, piso:'Piso 2', tipo:'Matrimonial', active:true},
-        {num:202, piso:'Piso 2', tipo:'Matrimonial', active:true},
-        {num:203, piso:'Piso 2', tipo:'Doble', active:true},
-        {num:204, piso:'Piso 2', tipo:'Matrimonial', active:true},
-        {num:205, piso:'Piso 2', tipo:'Triple', active:true},
-        {num:206, piso:'Piso 2', tipo:'Matrimonial', active:true},
-        {num:207, piso:'Piso 2', tipo:'Doble', active:true},
-        {num:208, piso:'Piso 2', tipo:'Familiar', active:true},
-        {num:301, piso:'Departamentos', tipo:'Departamento 1', active:true},
-        {num:302, piso:'Departamentos', tipo:'Departamento 2', active:true},
+        {num:101, piso:'Piso 1', tipo:'Matrimonial', active:true}, {num:102, piso:'Piso 1', tipo:'Matrimonial', active:true},
+        {num:103, piso:'Piso 1', tipo:'Doble', active:true}, {num:104, piso:'Piso 1', tipo:'Matrimonial', active:true},
+        {num:105, piso:'Piso 1', tipo:'Triple', active:true}, {num:106, piso:'Piso 1', tipo:'Matrimonial', active:true},
+        {num:107, piso:'Piso 1', tipo:'Doble', active:true}, {num:108, piso:'Piso 1', tipo:'Familiar', active:true},
+        {num:201, piso:'Piso 2', tipo:'Matrimonial', active:true}, {num:202, piso:'Piso 2', tipo:'Matrimonial', active:true},
+        {num:203, piso:'Piso 2', tipo:'Doble', active:true}, {num:204, piso:'Piso 2', tipo:'Matrimonial', active:true},
+        {num:205, piso:'Piso 2', tipo:'Triple', active:true}, {num:206, piso:'Piso 2', tipo:'Matrimonial', active:true},
+        {num:207, piso:'Piso 2', tipo:'Doble', active:true}, {num:208, piso:'Piso 2', tipo:'Familiar', active:true},
+        {num:301, piso:'Departamentos', tipo:'Departamento 1', active:true}, {num:302, piso:'Departamentos', tipo:'Departamento 2', active:true},
         {num:401, piso:'Zona Muelle', tipo:'Muelle', active:true}
     ];
 
@@ -511,12 +493,38 @@
     let limpieza = {}; let historialCache = []; 
     let currentUser = null; let modalInstance = null; let modalNuevoIngreso = null; 
     let calDate = new Date(); 
-    const now = new Date(); const offset = now.getTimezoneOffset() * 60000; const localDate = new Date(now.getTime() - offset); const hoy = localDate.toISOString().split('T')[0];
+    
+    // Fechas Locales
+    const now = new Date(); 
+    const offset = now.getTimezoneOffset() * 60000; 
+    const localDate = new Date(now.getTime() - offset); 
+    const hoy = localDate.toISOString().split('T')[0];
     const { jsPDF } = window.jspdf;
 
+    // --- DETECTOR ONLINE/OFFLINE ---
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    function updateOnlineStatus() {
+        const badge = document.getElementById('networkStatus');
+        const nav = document.querySelector('.navbar');
+        if (navigator.onLine) {
+            badge.className = 'badge bg-success ms-2'; badge.innerText = 'ONLINE';
+            if(nav) nav.style.background = 'linear-gradient(90deg, #1b262c 0%, #0f4c75 100%)';
+        } else {
+            badge.className = 'badge bg-danger ms-2'; badge.innerText = 'OFFLINE';
+            if(nav) nav.style.background = 'linear-gradient(90deg, #5c2525 0%, #3e1212 100%)';
+        }
+    }
+
     async function saveActiveData() {
-        try { await setDoc(DOC_ACTIVE, { habs, ress, inventario, caja, users, limpieza, lastUpdate: new Date().toISOString() }); } 
-        catch (e) { console.error("Error guardando:", e); }
+        try { 
+            // Validar datos antes de guardar para evitar corrupciones
+            const safeRess = ress.map(r => ({...r, id: String(r.id)})); // Forzar IDs a string
+            await setDoc(DOC_ACTIVE, { habs, ress: safeRess, inventario, caja, users, limpieza, lastUpdate: new Date().toISOString() }); 
+        } catch (e) { 
+            console.error("Error guardando:", e); 
+            Swal.fire({toast:true, position:'bottom-end', icon:'error', title:'Error de Sincronización', timer:3000});
+        }
     }
 
     function initRealtimeListener() {
@@ -524,10 +532,11 @@
             if (docSnap.exists()) {
                 const d = docSnap.data();
                 habs = d.habs && d.habs.length > 5 ? d.habs : defaultHabs; 
-                ress = d.ress || []; inventario = d.inventario || []; caja = d.caja || []; users = d.users || users; limpieza = d.limpieza || {};
+                // Asegurar compatibilidad de IDs
+                ress = (d.ress || []).map(r => ({...r, id: String(r.id)})); 
+                inventario = d.inventario || []; caja = d.caja || []; users = d.users || users; limpieza = d.limpieza || {};
                 
                 habs.forEach(h => { if(h.active === undefined) h.active = true; });
-                users.forEach(u => { if(!u.modules) u.modules = u.role === 'admin' ? ['all'] : ['nav-mapa']; });
 
                 if (!currentUser) {
                     const sessionUser = localStorage.getItem('sumaj_session');
@@ -548,6 +557,8 @@
                     funcs.populateLogUsers(); 
                 }
             } else { saveActiveData(); }
+        }, (error) => {
+            console.error("Error Listener:", error);
         });
     }
 
@@ -583,11 +594,11 @@
             if(funcs.checkPermiso('nav-caja')) funcs.renderCaja(); if(funcs.checkPermiso('nav-inventario')) funcs.renderInventario();
             if(funcs.checkPermiso('nav-usuarios')) funcs.renderUsuarios(); 
             funcs.renderLimpieza(); funcs.populateLogUsers();
-            updateOnlineStatus(); // Check inicial
+            updateOnlineStatus();
             setInterval(()=>document.getElementById('reloj').innerText=new Date().toLocaleString(),1000);
         },
 
-        // --- FUNCIONES CORE UI ---
+        // --- CORE UI ---
         actualizarPantalla: () => {
             const f = document.getElementById('filtroFecha').value; const grid = document.getElementById('gridHabitaciones'); 
             grid.innerHTML = ''; 
@@ -621,10 +632,11 @@
                     else if (stL === 'mantenimiento') { statusClass = 'b-mantenimiento'; chip = '<span class="badge bg-secondary">Mant.</span>'; mainInfo = '<div class="text-muted">Mantenimiento</div>'; }
 
                     const dN = h.num > 400 ? 'Muelle' : (h.num > 300 ? 'Dept' : h.num);
+                    const safeId = r ? `'${r.id}'` : null; // Importante: Comillas para el string en HTML
                     
                     contentHTML += `
                     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12">
-                        <div class="hab-card" onclick="window.funcs.verDetalle(${h.num}, ${r?r.id:null})">
+                        <div class="hab-card" onclick="window.funcs.verDetalle(${h.num}, ${safeId})">
                             <div class="card-top-strip ${statusClass}"></div>
                             <div class="card-body p-3 d-flex flex-column h-100 justify-content-between">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -656,7 +668,6 @@
             }
 
             let r;
-            // COMPARACION SEGURA (STRING vs STRING)
             if (id) {
                 const searchId = String(id);
                 r = isH ? historialCache.find(x => String(x.id) === searchId) : ress.find(x => String(x.id) === searchId);
@@ -665,7 +676,7 @@
                 r = ress.find(x => x.habNum == num && (f >= x.in && f <= x.out));
             }
 
-            // SI NO HAY RESERVA
+            // SIN RESERVA
             if (!r) {
                 const st = limpieza[num] || 'limpia';
                 let actionArea = '';
@@ -684,12 +695,14 @@
                 return;
             }
 
-            // SI HAY RESERVA
-            const cons = r.consumos || [],
-                tCons = cons.reduce((a, b) => a + (b.precio * b.cantidad), 0),
-                granT = isH ? r.totalFinal : (r.total + tCons),
-                deu = isH ? 0 : (granT - r.adelanto);
+            // CON RESERVA
+            const cons = r.consumos || [];
+            const tCons = cons.reduce((a, b) => a + (b.precio * b.cantidad), 0);
+            const granT = isH ? r.totalFinal : (r.total + tCons);
+            const deu = isH ? 0 : (granT - r.adelanto);
             const hBtn = isH ? 'display:none' : '';
+            const safeId = `'${r.id}'`; // Importante: Comillas para onclick
+
             let ops = '<option value="">+ Agregar Item</option>';
             inventario.forEach(p => ops += `<option value="${p.id}">${p.nombre} - S/${p.precio}</option>`);
 
@@ -701,7 +714,7 @@
                 <div class="col-lg-7 p-4 border-end">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div><h5 class="fw-bold m-0 text-primary">${r.cliente}</h5><div class="small text-muted"><i class="fas fa-id-card me-1"></i>${r.dni||'S/D'}</div></div>
-                        ${!isH ? `<button class="btn btn-sm btn-light border" onclick="window.funcs.editarReserva(${r.id})"><i class="fas fa-pen text-secondary"></i></button>` : ''}
+                        ${!isH ? `<button class="btn btn-sm btn-light border" onclick="window.funcs.editarReserva(${safeId})"><i class="fas fa-pen text-secondary"></i></button>` : ''}
                     </div>
                     <div class="d-flex gap-2 mb-4">
                         <div class="bg-light p-2 rounded flex-fill text-center"><small class="d-block text-muted">ENTRADA</small><b>${r.in}</b></div>
@@ -709,8 +722,8 @@
                         <div class="bg-light p-2 rounded flex-fill text-center"><small class="d-block text-muted">PAX</small><b>${r.personas}</b></div>
                     </div>
                     <h6 class="fw-bold border-bottom pb-2 mb-3">Consumos / Servicios</h6>
-                    <div class="input-group input-group-sm mb-3" style="${hBtn}"><select id="selP" class="form-select">${ops}</select><input id="selQ" type="number" value="1" class="form-control" style="max-width:60px"><button class="btn btn-primary" onclick="window.funcs.addCons(${r.id})"><i class="fas fa-plus"></i></button></div>
-                    <div class="table-responsive rounded border" style="max-height:200px;"><table class="table table-sm table-striped m-0 small align-middle"><tbody>${cons.length > 0 ? cons.map((c,i) => `<tr><td class="text-center fw-bold" width="30">${c.cantidad}</td><td>${c.item}</td><td class="text-end fw-bold">S/ ${(c.precio*c.cantidad).toFixed(2)}</td><td class="text-center" style="${hBtn}" width="30"><i class="fas fa-times text-danger cursor-pointer" onclick="window.funcs.delCons(${r.id},${i})"></i></td></tr>`).join('') : '<tr><td colspan="4" class="text-center text-muted py-3">Sin consumos registrados</td></tr>'}</tbody></table></div>
+                    <div class="input-group input-group-sm mb-3" style="${hBtn}"><select id="selP" class="form-select">${ops}</select><input id="selQ" type="number" value="1" class="form-control" style="max-width:60px"><button class="btn btn-primary" onclick="window.funcs.addCons(${safeId})"><i class="fas fa-plus"></i></button></div>
+                    <div class="table-responsive rounded border" style="max-height:200px;"><table class="table table-sm table-striped m-0 small align-middle"><tbody>${cons.length > 0 ? cons.map((c,i) => `<tr><td class="text-center fw-bold" width="30">${c.cantidad}</td><td>${c.item}</td><td class="text-end fw-bold">S/ ${(c.precio*c.cantidad).toFixed(2)}</td><td class="text-center" style="${hBtn}" width="30"><i class="fas fa-times text-danger cursor-pointer" onclick="window.funcs.delCons(${safeId},${i})"></i></td></tr>`).join('') : '<tr><td colspan="4" class="text-center text-muted py-3">Sin consumos registrados</td></tr>'}</tbody></table></div>
                 </div>
                 <div class="col-lg-5 p-4 bg-light d-flex flex-column">
                     <h6 class="fw-bold text-dark mb-3">Resumen de Cuenta</h6>
@@ -725,12 +738,12 @@
                         </div>
                     </div>
                     <div class="mt-auto d-grid gap-2">
-                        ${!isH && deu > 0.1 ? `<button class="btn btn-success fw-bold py-2 shadow-sm" onclick="window.funcs.pay(${r.id},${deu.toFixed(2)})"><i class="fas fa-money-bill-wave me-2"></i>COBRAR</button>` : ''}
+                        ${!isH && deu > 0.1 ? `<button class="btn btn-success fw-bold py-2 shadow-sm" onclick="window.funcs.pay(${safeId},${deu.toFixed(2)})"><i class="fas fa-money-bill-wave me-2"></i>COBRAR</button>` : ''}
                         <div class="btn-group">
-                            <button class="btn btn-outline-secondary" onclick="window.funcs.printTicket(${r.id},${isH})"><i class="fas fa-print"></i> Ticket</button>
-                            ${!isH ? `<button class="btn btn-outline-success" onclick="window.funcs.enviarWhatsapp(${r.id})"><i class="fab fa-whatsapp"></i></button>` : ''}
+                            <button class="btn btn-outline-secondary" onclick="window.funcs.printTicket(${safeId},${isH})"><i class="fas fa-print"></i> Ticket</button>
+                            ${!isH ? `<button class="btn btn-outline-success" onclick="window.funcs.enviarWhatsapp(${safeId})"><i class="fab fa-whatsapp"></i></button>` : ''}
                         </div>
-                        ${!isH ? `<button class="btn btn-dark fw-bold py-3 text-uppercase shadow" onclick="window.funcs.checkOut(${r.id},${deu.toFixed(2)})">CHECKOUT <i class="fas fa-sign-out-alt ms-1"></i></button>` : ''}
+                        ${!isH ? `<button class="btn btn-dark fw-bold py-3 text-uppercase shadow" onclick="window.funcs.checkOut(${safeId},${deu.toFixed(2)})">CHECKOUT <i class="fas fa-sign-out-alt ms-1"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -738,10 +751,8 @@
             modalInstance.show();
         },
 
-        // --- MANEJO DE ESTADO HABITACIONES ---
         setEstadoLimpieza: (num, estado) => { limpieza[num] = estado; saveActiveData(); funcs.registrarLog("LIMPIEZA", `Hab ${num} a ${estado}`); },
         
-        // --- RESERVAS ---
         abrirModalNuevaReserva: (habPreseleccionada = null) => {
             if(!modalNuevoIngreso) modalNuevoIngreso = new bootstrap.Modal(document.getElementById('modalNuevoIngreso'));
             document.getElementById('cliente').value = ''; document.getElementById('dni').value = ''; document.getElementById('numPersonas').value = '1'; document.getElementById('c_celular').value = ''; document.getElementById('total').value = '0'; document.getElementById('adelanto').value = '0';
@@ -755,11 +766,9 @@
             let fi = document.getElementById('checkin').value;
             let fo = document.getElementById('checkout').value;
             if(fi && fo) {
-                const dateIn = new Date(fi);
-                const dateOut = new Date(fo);
+                const dateIn = new Date(fi); const dateOut = new Date(fo);
                 if(dateOut <= dateIn) {
-                    const nextDay = new Date(dateIn);
-                    nextDay.setDate(dateIn.getDate() + 1);
+                    const nextDay = new Date(dateIn); nextDay.setDate(dateIn.getDate() + 1);
                     fo = nextDay.toISOString().split('T')[0];
                     document.getElementById('checkout').value = fo;
                     Swal.fire({toast:true, position:'top-end', icon:'info', title:'Fecha de salida ajustada', timer: 1500, showConfirmButton: false});
@@ -768,18 +777,14 @@
             const select = document.getElementById('habSelect');
             select.innerHTML = '';
             const sortedHabs = [...habs].sort((a,b) => {
-                const wa = (a.piso.includes('Dept') || a.piso.includes('Muelle')) ? 1 : 2;
-                const wb = (b.piso.includes('Dept') || b.piso.includes('Muelle')) ? 1 : 2;
-                if(wa !== wb) return wa - wb;
-                return a.num - b.num;
+                const wa = (a.piso.includes('Dept') || a.piso.includes('Muelle')) ? 1 : 2; const wb = (b.piso.includes('Dept') || b.piso.includes('Muelle')) ? 1 : 2;
+                if(wa !== wb) return wa - wb; return a.num - b.num;
             });
             sortedHabs.filter(h => h.active !== false).forEach(h => {
                 const isFree = !ress.some(r => r.habNum == h.num && fi < r.out && fo > r.in);
                 if (isFree || (habPreseleccionada && h.num == habPreseleccionada)) {
                     let displayName = '';
-                    if (h.num > 400) displayName = 'Muelle';
-                    else if (h.num > 300) displayName = `Depto ${h.num - 300}`;
-                    else displayName = `Hab ${h.num}`;
+                    if (h.num > 400) displayName = 'Muelle'; else if (h.num > 300) displayName = `Depto ${h.num - 300}`; else displayName = `Hab ${h.num}`;
                     select.innerHTML += `<option value="${h.num}">${displayName}</option>`;
                 }
             });
@@ -798,7 +803,9 @@
             if(document.getElementById('tipoHab').disabled) { const hObj = habs.find(h=>h.num === selHab); if(hObj) tipo = hObj.tipo; }
             if(limpieza[selHab]==='sucia'||limpieza[selHab]==='limpieza'){ const result = await Swal.fire({title: 'Habitación No Lista', text: '¿Asignar igual?', icon: 'warning', showCancelButton: true}); if(!result.isConfirmed) return; } 
             if(!funcs.validarDisponibilidad(selHab,d('checkin'),d('checkout'))) return Swal.fire('Ocupado', 'Fechas ocupadas', 'error'); 
-            ress.push({id:Date.now(),cliente:d('cliente'),dni:d('dni'),personas:d('numPersonas'),celular:d('c_celular'),habNum:selHab,tipo:tipo,in:d('checkin'),out:d('checkout'),total:t,adelanto:ad,medioPago:d('medioPago'),consumos:[]}); 
+            // Generar ID como String para evitar problemas
+            const newId = String(Date.now());
+            ress.push({id:newId, cliente:d('cliente'),dni:d('dni'),personas:d('numPersonas'),celular:d('c_celular'),habNum:selHab,tipo:tipo,in:d('checkin'),out:d('checkout'),total:t,adelanto:ad,medioPago:d('medioPago'),consumos:[]}); 
             saveActiveData(); funcs.registrarLog("RESERVA",`Hab ${d('habSelect')} - ${d('cliente')}`); 
             if(modalNuevoIngreso) modalNuevoIngreso.hide(); 
             Swal.fire({icon: 'success', title: 'Reserva Creada', timer: 1500, showConfirmButton: false, toast:true, position:'top-end'});
@@ -806,80 +813,69 @@
         
         validarDisponibilidad: (h, i, o, excludeId = null) => { return !ress.some(r => { if(excludeId && r.id === excludeId) return false; return r.habNum == h && i < r.out && o > r.in; }); },
         
-        // --- FUNCIÓN DE CHECKOUT REESCRITA (v37) ---
+        // --- CHECKOUT CORREGIDO Y ROBUSTO ---
         checkOut: async (id, d) => {
+            // Forzar cierre de modales UI primero
+            funcs.cerrarModalForce();
+
             const deuda = parseFloat(d);
-            const searchId = String(id); // Forzar String
+            const searchId = String(id); 
 
-            // 1. Validar Deuda
-            if (deuda > 0.1) return Swal.fire('Deuda Pendiente', 'El cliente debe cancelar su deuda total antes de poder realizar el Check-Out.', 'warning');
+            if (deuda > 0.1) return Swal.fire('Deuda Pendiente', 'Debe cancelar la deuda antes de realizar el Check-Out.', 'warning');
 
-            // 2. Confirmación
             const result = await Swal.fire({
-                title: '¿Confirmar Salida?',
-                text: "La habitación pasará a estado SUCIA.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, finalizar'
+                title: '¿Confirmar Salida?', text: "La habitación pasará a estado SUCIA.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#3085d6', cancelButtonColor: '#d33', confirmButtonText: 'Sí, finalizar'
             });
 
             if (!result.isConfirmed) return;
 
-            // 3. Buscar Indice (Forzando String en ambos lados)
             const index = ress.findIndex(x => String(x.id) === searchId);
-            
-            if (index === -1) {
-                console.error("ID Buscado:", searchId, "IDs Disponibles:", ress.map(r=>r.id));
-                return Swal.fire('Error Critico', 'No se encontró la reserva. Refresque la página.', 'error');
-            }
+            if (index === -1) return Swal.fire('Error', 'Reserva no encontrada (Intente recargar)', 'error');
 
             const r = ress[index];
             const tC = (r.consumos || []).reduce((a, b) => a + (b.precio * b.cantidad), 0);
-            const usuarioCierre = (currentUser && currentUser.user) ? currentUser.user : 'system_backup';
-
-            const finalRes = {
-                ...r,
-                totalFinal: r.total + tC,
-                fechaCierre: new Date().toISOString(),
-                closedBy: usuarioCierre
+            
+            // Objeto final para historial
+            const finalRes = { 
+                ...r, 
+                totalFinal: r.total + tC, 
+                fechaCierre: new Date().toISOString(), 
+                closedBy: currentUser ? currentUser.user : 'system' 
             };
 
-            try {
-                Swal.fire({title: 'Guardando...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+            Swal.fire({title: 'Procesando...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
 
-                // 4. Guardar Historial
+            try {
+                // 1. Guardar en Colección Historial
                 await addDoc(COL_HISTORY, finalRes);
 
-                // 5. Modificar Array (Mutación Directa)
+                // 2. Actualizar estado local
                 ress.splice(index, 1);
                 limpieza[r.habNum] = 'sucia';
 
-                // 6. Guardar Cambios
+                // 3. Guardar estado activo principal
                 await saveActiveData();
-                funcs.registrarLog("CHECK_OUT", `Hab ${r.habNum} - Salida Cliente`);
-
-                // 7. Cierre Forzoso de UI
-                funcs.cerrarModalForce();
-
-                Swal.fire({ icon: 'success', title: 'Check-Out Exitoso', timer: 1500, showConfirmButton: false });
                 
-                // 8. Repintar
+                funcs.registrarLog("CHECK_OUT", `Hab ${r.habNum} - Salida Cliente`);
+                
+                // Forzar repintado inmediato
                 funcs.actualizarPantalla();
                 funcs.renderLimpieza();
 
+                Swal.fire({ icon: 'success', title: 'Check-Out Exitoso', timer: 1500, showConfirmButton: false });
+
             } catch (e) {
                 console.error("Error CheckOut:", e);
-                Swal.fire('Error', 'Fallo al guardar: ' + e.message, 'error');
+                Swal.fire('Error en el proceso', 'Verifique su conexión a internet: ' + e.message, 'error');
+                // Intentar recargar datos por si hubo desincronización
+                funcs.initSystem();
             }
         },
         
         cerrarModalForce: () => {
             if (modalInstance) modalInstance.hide();
-            // Eliminar backdrop manualmente si Bootstrap falla
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(b => b.remove());
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
         },
@@ -909,10 +905,8 @@
             const ds = []; for(let i=1;i<=days;i++){ const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; ds.push(iso); head+=`<th class="${iso===hoy?'cal-today-col':''}">${i}</th>`; } head+='</tr></thead><tbody>';
             const getColor = (r) => { if(r.out === hoy) return 'var(--salida)'; return 'var(--ocupado)'; };
             const sortedHabs = [...habs].sort((a,b) => {
-                const wa = (a.piso.includes('Dept') || a.piso.includes('Muelle')) ? 1 : 2;
-                const wb = (b.piso.includes('Dept') || b.piso.includes('Muelle')) ? 1 : 2;
-                if(wa !== wb) return wa - wb;
-                return a.num - b.num;
+                const wa = (a.piso.includes('Dept') || a.piso.includes('Muelle')) ? 1 : 2; const wb = (b.piso.includes('Dept') || b.piso.includes('Muelle')) ? 1 : 2;
+                if(wa !== wb) return wa - wb; return a.num - b.num;
             });
             sortedHabs.filter(h => h.active !== false).forEach(h => {
                 const name = h.num > 400 ? 'Muelle' : (h.num > 300 ? `Depto ${h.num-300}` : `Hab ${h.num}`);
@@ -923,14 +917,14 @@
                     if(activeRes) {
                          bg = getColor(activeRes);
                          if (activeRes.in === d && activeRes.out !== d) bg = `linear-gradient(to right, white 50%, ${bg} 50%)`; else if (activeRes.out === d && activeRes.in !== d) bg = `linear-gradient(to right, ${bg} 50%, white 50%)`;
-                         clickId = activeRes.id;
+                         clickId = `'${activeRes.id}'`; // IDs como string
                     }
                     head+=`<td class="cal-cell" style="background:${bg}" onclick="window.funcs.verDetalle(${h.num},${clickId})"></td>`;
                 }); head+='</tr>';
             }); t.innerHTML=head+'</tbody>';
         },
         
-        // --- RESTO DE FUNCIONES ---
+        // --- RESTO ---
         agregarProducto: () => { const t=document.getElementById('invTipo').value,n=document.getElementById('invNombre').value,p=parseFloat(document.getElementById('invPrecio').value),s=t==='servicio'?999:parseInt(document.getElementById('invStock').value);if(!n)return;inventario.push({id:Date.now(),nombre:n,precio:p,stock:s,tipo:t});saveActiveData();funcs.renderInventario();document.getElementById('invNombre').value=''; },
         renderInventario: () => { const t=document.getElementById('tablaInventario');t.innerHTML='';inventario.forEach(p=>{t.innerHTML+=`<tr><td class="ps-4 fw-bold text-primary">${p.nombre}</td><td>${p.tipo}</td><td>S/ ${p.precio}</td><td>${p.tipo==='servicio'?'∞':p.stock}</td><td><button class="btn btn-sm btn-light text-danger" onclick="window.funcs.delInv(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`;}); },
         delInv: async (id) => { if(funcs.verificarPermisoAdmin()){inventario=inventario.filter(x=>x.id!==id);saveActiveData();funcs.renderInventario();} },
@@ -958,13 +952,13 @@
         toggleHabEstado: (n) => { const h = habs.find(x => x.num === n); if(h) { h.active = !h.active; saveActiveData(); funcs.renderConfigHabs(); } },
         checkPermiso: (modId) => { if(currentUser.modules.includes('all')) return true; return currentUser.modules.includes(modId); },
         verificarPermisoAdmin: () => { if (currentUser.modules.includes('all')) return true; Swal.fire('Acceso Denegado', 'Permisos insuficientes', 'error'); return false; },
-        addCons: (id) => { const pid = parseInt(document.getElementById('selP').value); const q = parseInt(document.getElementById('selQ').value); const p = inventario.find(i => i.id === pid); if(!p) return; if(p.tipo === 'producto') { if(p.stock < q) return Swal.fire('Sin Stock', `Quedan ${p.stock}`, 'error'); p.stock -= q; } const r = ress.find(x => x.id == id); if(!r.consumos) r.consumos = []; r.consumos.push({ idProd: p.id, item: p.nombre, precio: p.precio, cantidad: q, tipo: p.tipo }); saveActiveData(); funcs.verDetalle(r.habNum, id); },
-        delCons: (id, i) => { const r = ress.find(x => x.id == id); const it = r.consumos[i]; if(it.idProd && it.tipo === 'producto') { const p = inventario.find(x => x.id === it.idProd); if(p) { p.stock += it.cantidad; } } r.consumos.splice(i, 1); saveActiveData(); funcs.verDetalle(r.habNum, id); },
-        pay: async (id,m) => { const result = await Swal.fire({title: 'Cobrar Saldo', text: `¿Cobrar S/ ${m.toFixed(2)}?`, icon: 'info', showCancelButton: true}); if(result.isConfirmed){const r=ress.find(x=>x.id==id);r.adelanto+=m;saveActiveData();funcs.verDetalle(r.habNum,id);funcs.renderCal();} },
-        printTicket: (id, isH) => { const r = isH ? historialCache.find(x => x.id == id) : ress.find(x => x.id == id); const ventana = window.open('', 'PRINT', 'height=600,width=400'); ventana.document.write(`<html><body style="font-family:monospace;width:80mm;font-size:12px;text-align:center;"><h3>SUMAJ LODGE</h3><p>RUC: 20XXXXXXXXX<br>Sauce - San Martín</p><hr>HAB: ${r.habNum}<br>Cliente: ${r.cliente}<br>Total: S/${r.total}<hr><p>¡Gracias por su visita!</p></body></html>`); ventana.document.close(); ventana.focus(); setTimeout(() => { ventana.print(); ventana.close(); }, 500); },
-        enviarWhatsapp: (id) => { const r = ress.find(x => x.id == id); if(!r || !r.celular) return Swal.fire('Error', 'No hay celular registrado', 'warning'); let phone = r.celular.replace(/\D/g, ''); if(phone.length === 9) phone = '51' + phone; const texto = `Hola ${r.cliente}, gracias por visitar Sumaj Lagoon Lodge. Su cuenta total fue de S/ ${r.total.toFixed(2)}. ¡Esperamos verlo pronto!`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`, '_blank'); },
-        editarReserva: (id) => { const r = ress.find(x => x.id == id); if(!r) return; const htmlForm = `<div class="p-4"><h5 class="fw-bold text-primary mb-3">Editar Reserva</h5><input id="edit_cliente" class="form-control mb-2" value="${r.cliente}"><input id="edit_dni" class="form-control mb-2" value="${r.dni||''}"><div class="row g-2 mb-2"><div class="col-6"><input type="date" id="edit_in" class="form-control" value="${r.in}"></div><div class="col-6"><input type="date" id="edit_out" class="form-control" value="${r.out}"></div></div><input type="number" id="edit_total" class="form-control mb-3" value="${r.total}"><button class="btn btn-primary w-100" onclick="window.funcs.guardarEdicion(${r.id})">Guardar Cambios</button><button class="btn btn-link w-100 mt-2" onclick="window.funcs.verDetalle(${r.habNum}, ${r.id})">Cancelar</button></div>`; document.getElementById('mb').innerHTML = htmlForm; },
-        guardarEdicion: (id) => { const r = ress.find(x => x.id == id); if(!r) return; r.cliente=document.getElementById('edit_cliente').value; r.dni=document.getElementById('edit_dni').value; r.in=document.getElementById('edit_in').value; r.out=document.getElementById('edit_out').value; r.total=parseFloat(document.getElementById('edit_total').value); saveActiveData(); funcs.registrarLog("EDITAR", `Reserva ${r.id} modif`); funcs.verDetalle(r.habNum, r.id); },
+        addCons: (id) => { const pid = parseInt(document.getElementById('selP').value); const q = parseInt(document.getElementById('selQ').value); const p = inventario.find(i => i.id === pid); if(!p) return; if(p.tipo === 'producto') { if(p.stock < q) return Swal.fire('Sin Stock', `Quedan ${p.stock}`, 'error'); p.stock -= q; } const r = ress.find(x => String(x.id) == String(id)); if(!r.consumos) r.consumos = []; r.consumos.push({ idProd: p.id, item: p.nombre, precio: p.precio, cantidad: q, tipo: p.tipo }); saveActiveData(); funcs.verDetalle(r.habNum, id); },
+        delCons: (id, i) => { const r = ress.find(x => String(x.id) == String(id)); const it = r.consumos[i]; if(it.idProd && it.tipo === 'producto') { const p = inventario.find(x => x.id === it.idProd); if(p) { p.stock += it.cantidad; } } r.consumos.splice(i, 1); saveActiveData(); funcs.verDetalle(r.habNum, id); },
+        pay: async (id,m) => { const result = await Swal.fire({title: 'Cobrar Saldo', text: `¿Cobrar S/ ${m.toFixed(2)}?`, icon: 'info', showCancelButton: true}); if(result.isConfirmed){const r=ress.find(x=>String(x.id)==String(id));r.adelanto+=m;saveActiveData();funcs.verDetalle(r.habNum,id);funcs.renderCal();} },
+        printTicket: (id, isH) => { const r = isH ? historialCache.find(x => String(x.id) == String(id)) : ress.find(x => String(x.id) == String(id)); const ventana = window.open('', 'PRINT', 'height=600,width=400'); ventana.document.write(`<html><body style="font-family:monospace;width:80mm;font-size:12px;text-align:center;"><h3>SUMAJ LODGE</h3><p>RUC: 20XXXXXXXXX<br>Sauce - San Martín</p><hr>HAB: ${r.habNum}<br>Cliente: ${r.cliente}<br>Total: S/${r.total}<hr><p>¡Gracias por su visita!</p></body></html>`); ventana.document.close(); ventana.focus(); setTimeout(() => { ventana.print(); ventana.close(); }, 500); },
+        enviarWhatsapp: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r || !r.celular) return Swal.fire('Error', 'No hay celular registrado', 'warning'); let phone = r.celular.replace(/\D/g, ''); if(phone.length === 9) phone = '51' + phone; const texto = `Hola ${r.cliente}, gracias por visitar Sumaj Lagoon Lodge. Su cuenta total fue de S/ ${r.total.toFixed(2)}. ¡Esperamos verlo pronto!`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`, '_blank'); },
+        editarReserva: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r) return; const htmlForm = `<div class="p-4"><h5 class="fw-bold text-primary mb-3">Editar Reserva</h5><input id="edit_cliente" class="form-control mb-2" value="${r.cliente}"><input id="edit_dni" class="form-control mb-2" value="${r.dni||''}"><div class="row g-2 mb-2"><div class="col-6"><input type="date" id="edit_in" class="form-control" value="${r.in}"></div><div class="col-6"><input type="date" id="edit_out" class="form-control" value="${r.out}"></div></div><input type="number" id="edit_total" class="form-control mb-3" value="${r.total}"><button class="btn btn-primary w-100" onclick="window.funcs.guardarEdicion('${r.id}')">Guardar Cambios</button><button class="btn btn-link w-100 mt-2" onclick="window.funcs.verDetalle(${r.habNum}, '${r.id}')">Cancelar</button></div>`; document.getElementById('mb').innerHTML = htmlForm; },
+        guardarEdicion: (id) => { const r = ress.find(x => String(x.id) == String(id)); if(!r) return; r.cliente=document.getElementById('edit_cliente').value; r.dni=document.getElementById('edit_dni').value; r.in=document.getElementById('edit_in').value; r.out=document.getElementById('edit_out').value; r.total=parseFloat(document.getElementById('edit_total').value); saveActiveData(); funcs.registrarLog("EDITAR", `Reserva ${r.id} modif`); funcs.verDetalle(r.habNum, r.id); },
         guardarUsuario: () => { if(!funcs.verificarPermisoAdmin()) return; const u = document.getElementById('newUserName').value; const p = document.getElementById('newUserPass').value; const idx = parseInt(document.getElementById('editUserIndex').value); if(!u || !p) return Swal.fire('Error', 'Falta datos', 'warning'); const mods = Array.from(document.querySelectorAll('.perm-check:checked')).map(c=>c.value); if(idx === -1) users.push({user:u, pass:p, modules:mods}); else { users[idx].user=u; users[idx].pass=p; users[idx].modules=mods; } saveActiveData(); funcs.renderUsuarios(); funcs.limpiarFormUsuario(); },
         renderUsuarios: () => { const t=document.getElementById('tablaUsuarios'); t.innerHTML=''; users.forEach((u,i)=>{ t.innerHTML+=`<tr><td class="ps-4 fw-bold">${u.user}</td><td>${u.modules.includes('all')?'ADMIN':u.modules.length+' Módulos'}</td><td><button class="btn btn-sm btn-info text-white me-1" onclick="window.funcs.editUser(${i})"><i class="fas fa-pen"></i></button>${u.user!=='admin'?`<button class="btn btn-sm btn-danger" onclick="window.funcs.delUser('${u.user}')"><i class="fas fa-trash"></i></button>`:''}</td></tr>`; }); },
         editUser: (i) => { const u=users[i]; document.getElementById('editUserIndex').value=i; document.getElementById('newUserName').value=u.user; document.getElementById('newUserPass').value=u.pass; document.querySelectorAll('.perm-check').forEach(c => c.checked = u.modules.includes('all') || u.modules.includes(c.value)); },
